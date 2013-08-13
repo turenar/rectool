@@ -4,6 +4,10 @@ TO=/data/encoded
 ARCHIVE=/data/archives
 export DISPLAY=:0
 
+renice -n 19 $$
+ionice -c 3 -p $$
+
+if true; then # avoid syntax error with editting
 
 EPGREC_D="$(dirname "$0")"
 BASEDIR="$(dirname "$(readlink -f "$0")")"
@@ -64,31 +68,32 @@ if [ ! -v 'av_encskip' ]; then
 	echo "video.map: ${video_map}"
 	echo "audio.map: ${audio_map}"
 
-
-	echo "avconv with full"
-	nice -n 19 avconv -i "${av_encfile}" -loglevel ${loglevel} -y -f mp4 \
-		-pre:0 hq -vcodec libx264 -vsync 1 \
-		-me_method umh -bufsize 20000k -maxrate 16000k \
-		-r 30000/1001 -deinterlace -aspect 16:9 \
-		-ab 256k -crf 20 -ss 00:00:01 \
-		${video_map} ${audio_map} -acodec libfaac \
-		"${tempfile}/full.mp4" || exit 1
+	if [ ! -v "av_fullskip" ]; then
+		echo "avconv with full"
+		nice -n 19 avconv -i "${av_encfile}" -loglevel ${loglevel} -y -f mp4 \
+			-pre:0 hq -vcodec libx264 -vsync 1 \
+			-acodec copy -bufsize 20000k -maxrate 16000k \
+			-r 30000/1001 -filter:v yadif -aspect 16:9 \
+			-crf 22 -ss 00:00:01 \
+			${video_map} ${audio_map} \
+			"${tempfile}/full.mp4" || exit 1
+	fi
 	echo "avconv with mini"
 	nice -n 19 avconv -i "${av_encfile}" -loglevel ${loglevel} -y -f mp4 \
-		-pre:0 slow_firstpass -vcodec libx264 -vsync 1 -threads 3 \
-		-pass 1 -passlogfile ${tempfile}/passlog -qcomp 0.8 -me_method dia \
-		-r 30000/1001 -deinterlace -aspect 16:9 -s 640x480 \
-		-vb 900k -ab 160k -ss 00:00:01 \
-		${video_map} ${audio_map} -acodec libfaac \
+		-pre:0 slow_firstpass -vcodec libx264 -vsync 1 \
+		-pass 1 -passlogfile ${tempfile}/passlog -qcomp 0.8 \
+		-r 30000/1001 -filter:v yadif -aspect 16:9 -s 640x480 \
+		-vb 750k -an -ss 00:00:01 \
+		${video_map} \
 		/dev/null || exit 1
 	nice -n 19 avconv -i "${av_encfile}" -loglevel ${loglevel} -y -f mp4 \
-		-pre:0 slow -vcodec libx264 -vsync 1 -threads 3 \
-		-pass 2 -passlogfile ${tempfile}/passlog -qcomp 0.8 -me_method umh \
-		-r 30000/1001 -deinterlace -aspect 16:9 -s 640x480 \
-		-vb 900k -ab 160k -ss 00:00:01 \
+		-pre:0 slow -vcodec libx264 -vsync 1 \
+		-pass 2 -passlogfile ${tempfile}/passlog -qcomp 0.8 \
+		-r 30000/1001 -filter:v yadif -aspect 16:9 -s 640x480 \
+		-vb 750k -ab 160k -ss 00:00:01 -mixed-refs 0 \
 		${video_map} ${audio_map} -acodec libfaac \
 		"${tempfile}/mini.mp4" || exit 1
-	qt-faststart "${tempfile}/full.mp4" \
+	[ ! -v "av_fullskip" ] && qt-faststart "${tempfile}/full.mp4" \
 		"${fullfile}"
 	qt-faststart "${tempfile}/mini.mp4" \
 		"${minifile}"
@@ -99,7 +104,7 @@ if [ ! -v 'av_encskip' ]; then
 	sleep 1
 fi
 
-if [ -e "${fullfile}" ]; then
+if [ ! -v "av_fullskip" -a -e "${fullfile}" ]; then
 	until php "${EPGREC_D}/mediatomb-update.php" "${FNFULLPATH}" "${fullfile}"; do
 		echo -n 'Wait..'
 		sleep 1
@@ -137,3 +142,6 @@ if [ ! -v 'av_encskip' -a -e "${FROM}/${FILENAME}" ]; then
 fi
 
 #rm -f ${FILENAME} ${tempfile}
+
+fi # avoid size differing
+#########################
