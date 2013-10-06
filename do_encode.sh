@@ -112,7 +112,7 @@ fi
 #fi
 
 cd "${TO}/full"
-"${EPGREC_D}/update-filepath.sh" "${FN_NOSUF}-full.mp4"
+php "${EPGREC_D}/update-filepath.php" "${FN_NOSUF}-full.mp4"
 
 if [ -e "${FN_NOSUF}-full.mp4" ]; then
 	php "${EPGREC_D}/epgrec-update.php" "${FILENAME}" "mp4/${FN_NOSUF}-full.mp4"
@@ -126,7 +126,7 @@ elif [ -e */"${FN_NOSUF}-full.mp4" ]; then
 fi
 
 cd "${TO}/mini"
-"${EPGREC_D}/update-filepath.sh" "${FN_NOSUF}-mini.enc"
+php "${EPGREC_D}/update-filepath.php" "${FN_NOSUF}-mini.enc"
 
 if [ ! -v 'av_encskip' -a -e "${FROM}/${FILENAME}" ]; then
 	echo 'Moving file into archives'
