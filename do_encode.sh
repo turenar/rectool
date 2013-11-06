@@ -1,7 +1,7 @@
 #!/bin/bash
 FROM=/data/epgrec
 TO=/data/encoded
-ARCHIVE=/data/archives
+ARCHIVE=/data/archives.ts
 export DISPLAY=:0
 
 renice -n 19 $$
@@ -66,8 +66,8 @@ if [ ! -v 'av_encskip' ]; then
 
 	echo "avconv with full"
 	dd if="${OUTPUT}" ibs=512M obs=64k | avconv -i pipe: -loglevel ${loglevel} -y -f mp4 \
-		-pre:0 hq -vcodec libx264 -vsync 1 \
-		-acodec copy -bufsize 20000k -maxrate 16000k \
+		-pre:v hq -vcodec libx264 -vsync 1 \
+		-acodec libfaac -bufsize 20000k -maxrate 16000k \
 		-r 30000/1001 -filter:v yadif -aspect 16:9 \
 		-crf 20 -ss 00:00:01 \
 		${video_map} ${audio_map} \
