@@ -1,5 +1,6 @@
 <?php
 define("EPGRDIR", "/var/www/localhost/htdocs/epgrec-una/");
+define("F_GROUP", "mediaprov");
 
 function test_re($expr, $haystack){
 	return !!preg_match("@$expr@u", "$haystack");
@@ -8,18 +9,41 @@ function test_re($expr, $haystack){
 function move_into($src, $dst){
 	$dstfile="$dst/".basename($src);
 
-	is_dir($dst) || mkdir($dst);
+	if(!is_dir($dst)) {
+		mkdir($dst, 0775, true);
+		chgrp($dst, F_GROUP);
+	}
+	
+	if(realpath($src)!==FALSE && realpath($src) === realpath($dst)."/".basename($src)){
+		echo "E: not have to move\n";
+		exit(0);
+	}
 
-	echo "Moving ".basename($src)." into $dst\n";
+	link($src, "$src.bak");
+	echo "Moving '".basename($src)."' into '$dst'\n";
 	if(file_exists($dstfile)){
 		echo "Replacing...\n";
 		unlink($dstfile);
 	}
-	link($src, $dstfile);
+
+	$srcstat = stat($src);
+	$dststat = stat($dst);
+	if($srcstat['dev'] === $dststat['dev']){
+		link($src, $dstfile);
+	}else{
+		echo "D:cross-dev\n";
+		copy($src, $dstfile);
+	}
+
 	if(!file_exists($dstfile)){
 		echo("${dstfile} is not created! Abort\n");
+		if(!file_exists($src)){
+			echo("${src} is deleted. recoverying\n");
+			rename("$src.bak", $src);
+		}
 		exit(1);
 	}
+	unlink("$src.bak");
 	//sleep(1);
 	//system("php '".EPGRDIR."/mediatomb-update.php' '".realpath($src)."' '".realpath($dstfile)."'", $retval);
 	/*while($retval) {
@@ -45,6 +69,9 @@ function copy_if($regex, $dst){
 $src = $argv[1];
 if(!file_exists($src)){
 	echo "Not found.\n";
+	exit(1);
+}else if(is_dir($src)){
+	echo "Target is directory! Abort.\n";
 	exit(1);
 }
 
