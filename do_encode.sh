@@ -94,16 +94,13 @@ if [ ! -v 'av_encskip' ]; then
 	echo "finish! cleaning up..."
 	rm ${tempfile}/*
 	rmdir ${tempfile}
-	echo "Wait for mediatomb importing..."
-	sleep 1
+	#echo "Wait for mediatomb importing..."
+	#sleep 5
 fi
 
-if [ -e "${fullfile}" ]; then
-	until php "${EPGREC_D}/mediatomb-update.php" "${FNFULLPATH}" "${fullfile}"; do
-		echo -n 'Wait..'
-		sleep 1
-	done
-fi
+#if [ -e "${fullfile}" ]; then
+#	php "${EPGREC_D}/mediatomb-update.php" "${FNFULLPATH}" "${fullfile}"
+#fi
 #if [ -e "${minifile}" ]; then
 #	until php "${EPGREC_D}/mediatomb-update.php" "${FNFULLPATH}" "${minifile}" ' (low)'; do
 #		echo -n 'Wait..'
@@ -132,8 +129,8 @@ if [ ! -v 'av_encskip' -a -e "${FROM}/${FILENAME}" ]; then
 	echo 'Moving file into archives'
 	cd "${FROM}"
 	ln "${FILENAME}" "${ARCHIVE}/${FILENAME}"
-	sleep 1
-	php "${EPGREC_D}/mediatomb-update.php" "${FNFULLPATH}" "${ARCHIVE}/${FILENAME}"
+	#sleep 1
+	#php "${EPGREC_D}/mediatomb-update.php" "${FNFULLPATH}" "${ARCHIVE}/${FILENAME}"
 	rm "${FILENAME}"
 fi
 

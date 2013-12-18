@@ -20,13 +20,13 @@ function move_into($src, $dst){
 		echo("${dstfile} is not created! Abort\n");
 		exit(1);
 	}
-	sleep(1);
-	system("php '".EPGRDIR."/mediatomb-update.php' '".realpath($src)."' '".realpath($dstfile)."'", $retval);
-	while($retval) {
+	//sleep(1);
+	//system("php '".EPGRDIR."/mediatomb-update.php' '".realpath($src)."' '".realpath($dstfile)."'", $retval);
+	/*while($retval) {
 		echo "Wait...";
 		sleep(1);
 		system("php '".EPGRDIR."/mediatomb-update.php' '".realpath($src)."' '".realpath($dstfile)."'", $retval);
-	}
+	}*/
 	unlink($src);
 	exit(0);
 }
