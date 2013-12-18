@@ -34,7 +34,7 @@ fullfile="${TO}/full/${FN_NOSUF}-full.mp4"
 #minifile="${TO}/mini/${FN_NOSUF}-mini.mp4"
 
 if [ ! -v 'av_encskip' ]; then
-	exec 9>>/var/lock/epgrec.encode
+	exec 9>>/run/encode.lock
 	flock -n 9
 	if [ $? -ne 0 ]; then
 		echo 'Waiting for exclusive lock...'
