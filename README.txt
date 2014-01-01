@@ -3,6 +3,7 @@ Requirements:
 		recommend: 09cb75cd
 	atd
 	tsselect (ex. https://github.com/shesee/tsselect-linux)
+	php (>5.3)
 
 	>1GB free memory
 
