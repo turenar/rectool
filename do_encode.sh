@@ -2,6 +2,8 @@
 FROM=/data/epgrec
 TO=/data/encoded
 ARCHIVE=/data/archives.ts
+BUFFER_SIZE=512M
+
 export DISPLAY=:0
 
 renice -n 19 $$
@@ -65,7 +67,7 @@ if [ ! -v 'av_encskip' ]; then
 	echo "audio.map: ${audio_map}"
 
 	echo "avconv with full"
-	dd if="${OUTPUT}" ibs=512M obs=64k | avconv -i pipe: -loglevel ${loglevel} -y -f mp4 \
+	dd if="${OUTPUT}" ibs=${BUFFER_SIZE} obs=64k | avconv -i pipe: -loglevel ${loglevel} -y -f mp4 \
 		-pre:v hq -vcodec libx264 -vsync 1 \
 		-acodec libfaac -bufsize 20000k -maxrate 16000k \
 		-r 30000/1001 -filter:v yadif -aspect 16:9 \
