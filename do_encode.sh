@@ -32,8 +32,8 @@ if [ ! -e "${FILENAME}" ]; then
 	exit 1
 fi
 
-fullfile="${TO}/full/${FN_NOSUF}-full.mp4"
-#minifile="${TO}/mini/${FN_NOSUF}-mini.mp4"
+fullfile="${TO}/full/${FN_NOSUF}.mp4"
+nocmfile="${TO}/full/nocm-${FN_NOSUF}.mp4"
 
 if [ ! -v 'av_encskip' ]; then
 	exec 9>>/run/encode.lock
@@ -74,25 +74,27 @@ if [ ! -v 'av_encskip' ]; then
 		-crf 20 -ss 00:00:01 \
 		${video_map} ${audio_map} \
 		"${tempfile}/full.mp4" || exit 1
-	#echo "avconv with mini"
-	#nice -n 19 avconv -i "${av_encfile}" -loglevel ${loglevel} -y -f mp4 \
-	#	-pre:0 slow_firstpass -vcodec libx264 -vsync 1 \
-	#	-pass 1 -passlogfile ${tempfile}/passlog -qcomp 0.8 \
-	#	-r 30000/1001 -filter:v yadif -aspect 16:9 -s 640x480 \
-	#	-vb 750k -an -ss 00:00:01 \
-	#	${video_map} \
-	#	/dev/null || exit 1
-	#nice -n 19 avconv -i "${av_encfile}" -loglevel ${loglevel} -y -f mp4 \
-	#	-pre:0 slow -vcodec libx264 -vsync 1 \
-	#	-pass 2 -passlogfile ${tempfile}/passlog -qcomp 0.8 \
-	#	-r 30000/1001 -filter:v yadif -aspect 16:9 -s 640x480 \
-	#	-vb 750k -ab 160k -ss 00:00:01 -mixed-refs 0 \
-	#	${video_map} ${audio_map} -acodec libfaac \
-	#	"${tempfile}/mini.mp4" || exit 1
+	echo "avconv with cm cut"
+	ln -s "$(readlink -f "${OUTPUT}")" "${tempfile}/source.ts"
+	mkfifo "${tempfile}/CUT-source.ts"
+	cd "${tempfile}"
+	"${EPGREC_D}/comskip_wrapper.sh" "${EPGREC_D}/comskip.ini" source.ts
+	errorcode=$?
+	if [ ${errorcode} -eq 2 ]; then
+		: # No commercials are found
+	else
+		avconv -i "${tempfile}/CUT-source.ts" -loglevel ${loglevel} -y -f mp4 \
+			-pre:v hq -vcodec libx264 -vsync 1 \
+			-acodec libfaac -bufsize 20000k -maxrate 16000k \
+			-r 30000/1001 -filter:v yadif -aspect 16:9 \
+			-crf 20 -ss 00:00:01 \
+			${video_map} ${audio_map} \
+			"${tempfile}/cmcut.mp4" || exit 1
+		qt-faststart "${tempfile}/cmcut.mp4" \
+			"${nocmfile}"
+	fi
 	qt-faststart "${tempfile}/full.mp4" \
 		"${fullfile}"
-	#qt-faststart "${tempfile}/mini.mp4" \
-	#	"${minifile}"
 	echo "finish! cleaning up..."
 	rm ${tempfile}/*
 	rmdir ${tempfile}
@@ -111,17 +113,18 @@ fi
 #fi
 
 cd "${TO}/full"
-php "${EPGREC_D}/update-filepath.php" "${FN_NOSUF}-full.mp4"
+php "${EPGREC_D}/update-filepath.php" "${FN_NOSUF}.mp4"
+php "${EPGREC_D}/update-filepath.php" "nocm-${FN_NOSUF}.mp4"
 
-if [ -e "${FN_NOSUF}-full.mp4" ]; then
-	php "${EPGREC_D}/epgrec-update.php" "${FILENAME}" "mp4/${FN_NOSUF}-full.mp4"
-	[ -e "${EPGREC_D}/thumbs/${FILENAME}.jpg" ] && mv "${EPGREC_D}/thumbs/${FILENAME}.jpg" "${EPGREC_D}/thumbs/${FN_NOSUF}-full.mp4.jpg"
+if [ -e "${FN_NOSUF}.mp4" ]; then
+	php "${EPGREC_D}/epgrec-update.php" "${FILENAME}" "mp4/${FN_NOSUF}.mp4"
+	[ -e "${EPGREC_D}/thumbs/${FILENAME}.jpg" ] && mv "${EPGREC_D}/thumbs/${FILENAME}.jpg" "${EPGREC_D}/thumbs/${FN_NOSUF}.mp4.jpg"
 	echo "${TO}/${FN_NOSUF}" > "${TO}/mini/${FN_NOSUF}-mini.enc"
-elif [ -e */"${FN_NOSUF}-full.mp4" ]; then
-	_filename=*/"${FN_NOSUF}-full.mp4"
+elif [ -e */"${FN_NOSUF}.mp4" ]; then
+	_filename=*/"${FN_NOSUF}.mp4"
 	echo "${TO}/${_filename}" > "${TO}/mini/${FN_NOSUF}-mini.enc"
 	php "${EPGREC_D}/epgrec-update.php" "${FILENAME}" "mp4/${_filename}"
-	[ -e "${EPGREC_D}/thumbs/${FILENAME}.jpg" ] && mv "${EPGREC_D}/thumbs/${FILENAME}.jpg" "${EPGREC_D}/thumbs/${FN_NOSUF}-full.mp4.jpg"
+	[ -e "${EPGREC_D}/thumbs/${FILENAME}.jpg" ] && mv "${EPGREC_D}/thumbs/${FILENAME}.jpg" "${EPGREC_D}/thumbs/${FN_NOSUF}.mp4.jpg"
 fi
 
 cd "${TO}/mini"
