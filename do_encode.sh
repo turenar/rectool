@@ -119,10 +119,8 @@ php "${EPGREC_D}/update-filepath.php" "nocm-${FN_NOSUF}.mp4"
 if [ -e "${FN_NOSUF}.mp4" ]; then
 	php "${EPGREC_D}/epgrec-update.php" "${FILENAME}" "mp4/${FN_NOSUF}.mp4"
 	[ -e "${EPGREC_D}/thumbs/${FILENAME}.jpg" ] && mv "${EPGREC_D}/thumbs/${FILENAME}.jpg" "${EPGREC_D}/thumbs/${FN_NOSUF}.mp4.jpg"
-	echo "${TO}/${FN_NOSUF}" > "${TO}/mini/${FN_NOSUF}-mini.enc"
 elif [ -e */"${FN_NOSUF}.mp4" ]; then
 	_filename=*/"${FN_NOSUF}.mp4"
-	echo "${TO}/${_filename}" > "${TO}/mini/${FN_NOSUF}-mini.enc"
 	php "${EPGREC_D}/epgrec-update.php" "${FILENAME}" "mp4/${_filename}"
 	[ -e "${EPGREC_D}/thumbs/${FILENAME}.jpg" ] && mv "${EPGREC_D}/thumbs/${FILENAME}.jpg" "${EPGREC_D}/thumbs/${FN_NOSUF}.mp4.jpg"
 fi

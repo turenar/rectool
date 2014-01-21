@@ -24,7 +24,7 @@ fi
 
 COMSKIP=comskip
 FFMPEG=avconv
-OPTIONS=--csvout
+OPTIONS='--csvout --quiet'
 INIFILE="$1"
 TS_FILE="$2"
 
@@ -109,7 +109,7 @@ for _END__CSEC in ${_END__CSEC_ARRAY[@]}; do
     # ffmpeg -i <input_data> -ss <start_sec> -t <play_time> <output_data>
     echo "${FFMPEG} -y -i ${TS_FILE} -c copy -ss ${BEGIN_TIME} -t ${PLAY_TIME} -sn `pwd`/${FILE_NAME}-${FILE_PARTS}.ts"
     # if you use with mkfifo, run FFMPEG command IN BACKGROUND (just append &)
-    ${FFMPEG} -y -i "${TS_FILE}" -c copy -ss ${BEGIN_TIME} -t ${PLAY_TIME} -sn `pwd`/"${FILE_NAME}-${FILE_PARTS}.ts" &
+    ${FFMPEG} -loglevel 0 -y -i "${TS_FILE}" -c copy -ss ${BEGIN_TIME} -t ${PLAY_TIME} -sn `pwd`/"${FILE_NAME}-${FILE_PARTS}.ts" &
 done
 
 #
@@ -127,4 +127,4 @@ done
 
 OUTPUT_FILE="`pwd`/CUT-${FILE_NAME}ts"
 echo "${FFMPEG} -i \"${FFMPEG_CONCAT_STR}\" -c copy ${OUTPUT_FILE}"
-${FFMPEG} -i "${FFMPEG_CONCAT_STR}" -c copy "${OUTPUT_FILE}" &
+${FFMPEG} -loglevel 0 -y -i "${FFMPEG_CONCAT_STR}" -c copy "${OUTPUT_FILE}" &
