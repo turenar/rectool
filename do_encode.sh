@@ -76,6 +76,9 @@ if [ ! -v 'av_encskip' ]; then
 		${video_map} ${audio_map} \
 		"${tempfile}/full.mp4" || exit 1
 	echo "avconv with cm cut"
+	if [[ "${FILENAME}" == GR* ]]; then
+		echo "skip because this file is GR*"
+	else
 	ln -s "$(readlink -f "${OUTPUT}")" "${tempfile}/source.ts"
 	mkfifo "${tempfile}/CUT-source.ts"
 	cd "${tempfile}"
@@ -94,6 +97,7 @@ if [ ! -v 'av_encskip' ]; then
 		qt-faststart "${tempfile}/cmcut.mp4" \
 			"${nocmfile}"
 	fi
+	fi #gr check
 	qt-faststart "${tempfile}/full.mp4" \
 		"${fullfile}"
 	echo "finish! cleaning up..."
