@@ -110,12 +110,6 @@ fi
 #if [ -e "${fullfile}" ]; then
 #	php "${EPGREC_D}/mediatomb-update.php" "${FNFULLPATH}" "${fullfile}"
 #fi
-#if [ -e "${minifile}" ]; then
-#	until php "${EPGREC_D}/mediatomb-update.php" "${FNFULLPATH}" "${minifile}" ' (low)'; do
-#		echo -n 'Wait..'
-#		sleep 1
-#	done
-#fi
 
 cd "${TO}/full"
 php "${EPGREC_D}/update-filepath.php" "${FN_NOSUF}.mp4"
@@ -129,9 +123,6 @@ elif [ -e */"${FN_NOSUF}.mp4" ]; then
 	php "${EPGREC_D}/epgrec-update.php" "${FILENAME}" "mp4/${_filename}"
 	[ -e "${EPGREC_D}/thumbs/${FILENAME}.jpg" ] && mv "${EPGREC_D}/thumbs/${FILENAME}.jpg" "${EPGREC_D}/thumbs/${FN_NOSUF}.mp4.jpg"
 fi
-
-cd "${TO}/mini"
-php "${EPGREC_D}/update-filepath.php" "${FN_NOSUF}-mini.enc"
 
 if [ ! -v 'av_encskip' -a -e "${FROM}/${FILENAME}" ]; then
 	echo 'Moving file into archives'
