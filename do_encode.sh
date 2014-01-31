@@ -6,6 +6,7 @@ BUFFER_SIZE=512M
 
 export DISPLAY=:0
 
+ulimit -m $((4 * 1024 * 1024)) -v $((4 * 1024 * 1024))
 renice -n 19 $$
 ionice -c 3 -p $$
 
