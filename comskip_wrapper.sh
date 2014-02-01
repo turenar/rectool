@@ -28,7 +28,7 @@ OPTIONS='--csvout --quiet'
 INIFILE="$1"
 TS_FILE="$2"
 
-${COMSKIP} ${OPTIONS} --ini="${INIFILE}" "${TS_FILE}"
+${COMSKIP} ${OPTIONS} --ini="${INIFILE}" "${TS_FILE}" 2>/dev/null
 
 FEXT="${TS_FILE##*.}"
 FILE_NAME="$(basename "${TS_FILE}" "${FEXT}")"
