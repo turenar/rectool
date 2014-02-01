@@ -28,6 +28,35 @@ OPTIONS='--csvout --quiet'
 INIFILE="$1"
 TS_FILE="$2"
 
+function get_time() {
+    local _cstime _csec _sec _time
+    _cstime=$1
+    _sec=`expr ${_cstime} / 100`
+    _csec=`expr ${_cstime} % 100`
+    _time="${_sec}.${_csec}"
+    echo ${_time}
+}
+
+function get_stream_offset() {
+    local _cstime
+    _cstime=$1
+    if [ ${_cstime} -le 100 ]; then
+        echo 0
+    else
+        get_time $(( ${_cstime} - 100 ))
+    fi
+}
+
+function get_offset() {
+    local _cstime
+    _cstime=$1
+    if [ ${_cstime} -le 100 ]; then
+        echo 0.${_cstime}
+    else
+        echo 1.0
+    fi
+}
+
 ${COMSKIP} ${OPTIONS} --ini="${INIFILE}" "${TS_FILE}" 2>/dev/null
 
 FEXT="${TS_FILE##*.}"
@@ -92,24 +121,21 @@ for _END__CSEC in ${_END__CSEC_ARRAY[@]}; do
     # _END__CSEC and BEGIN_CSEC is centisec!!
     BEGIN_CSEC=${BEGIN_CSEC_ARRAY[${i}]}
     # calculate original time for beginning
-    BEGIN_SEC=`expr ${BEGIN_CSEC} / 100`
-    BEGIN_CENTISEC=`expr ${BEGIN_CSEC} % 100`
-    BEGIN_TIME="${BEGIN_SEC}.${BEGIN_CENTISEC}"
+    BEGIN_OFFSET_TIME=$(get_stream_offset ${BEGIN_CSEC})
+    BEGIN_TIME=$(get_offset ${BEGIN_CSEC})
 
     let i++
     FILE_PARTS=${i}
     CUT_FILE_LIST+=(`pwd`/"${FILE_NAME}-${FILE_PARTS}.ts")
 
     DIFF_TIME=`expr ${_END__CSEC} - ${BEGIN_CSEC}`
-    DIFF_SEC=`expr ${DIFF_TIME} / 100`
-    DIFF_CENTISEC=`expr ${DIFF_TIME} % 100`
-    PLAY_TIME="${DIFF_SEC}.${DIFF_CENTISEC}"
+    PLAY_TIME=$(get_time ${DIFF_TIME})
     #echo "DEBUG: $_END__CSEC - $BEGIN_CSEC = ${DIFF_SEC}.${DIFF_CENTISEC}"
     mkfifo "$(pwd)/${FILE_NAME}-${FILE_PARTS}.ts"
     # ffmpeg -i <input_data> -ss <start_sec> -t <play_time> <output_data>
-    echo "${FFMPEG} -y -i ${TS_FILE} -c copy -ss ${BEGIN_TIME} -t ${PLAY_TIME} -sn `pwd`/${FILE_NAME}-${FILE_PARTS}.ts"
+    echo ${FFMPEG} -loglevel 0 -y -ss ${BEGIN_OFFSET_TIME} -i "${TS_FILE}" -c copy -vcodec mpeg2video -ss ${BEGIN_TIME} -t ${PLAY_TIME} -sn `pwd`/"${FILE_NAME}-${FILE_PARTS}.ts"
     # if you use with mkfifo, run FFMPEG command IN BACKGROUND (just append &)
-    ${FFMPEG} -loglevel 0 -y -i "${TS_FILE}" -c copy -ss ${BEGIN_TIME} -t ${PLAY_TIME} -sn `pwd`/"${FILE_NAME}-${FILE_PARTS}.ts" &
+    ${FFMPEG} -loglevel 0 -y -ss ${BEGIN_OFFSET_TIME} -i "${TS_FILE}" -c:a copy -c:v mpeg2video -q:v 1 -ss ${BEGIN_TIME} -t ${PLAY_TIME} -sn `pwd`/"${FILE_NAME}-${FILE_PARTS}.ts" &
 done
 
 #
@@ -126,5 +152,5 @@ for FILE in ${CUT_FILE_LIST[@]}; do
 done
 
 OUTPUT_FILE="`pwd`/CUT-${FILE_NAME}ts"
-echo "${FFMPEG} -i \"${FFMPEG_CONCAT_STR}\" -c copy ${OUTPUT_FILE}"
-${FFMPEG} -loglevel 0 -y -i "${FFMPEG_CONCAT_STR}" -c copy "${OUTPUT_FILE}" &
+echo "${FFMPEG} -i \"${TS_FILE}" -i \"${FFMPEG_CONCAT_STR}\" -c copy ${OUTPUT_FILE}"
+${FFMPEG} -loglevel info -y -i "${TS_FILE}" -i "${FFMPEG_CONCAT_STR}" -map 1:a -map 2:v -c copy "${OUTPUT_FILE}" &
