@@ -86,6 +86,9 @@ if [ ! -v 'av_encskip' ]; then
 	errorcode=$?
 	if [ ${errorcode} -eq 2 ]; then
 		: # No commercials are found
+	elif [ ${errorcode} -ne 0 ]; then
+		echo "comskip seems to exit with error. abort."
+		exit 1
 	else
 		avconv -i "${tempfile}/CUT-source.ts" -loglevel ${loglevel} -y -f mp4 \
 			-pre:v hq -vcodec libx264 -vsync 1 \
