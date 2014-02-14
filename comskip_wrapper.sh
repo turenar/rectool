@@ -34,7 +34,7 @@ function get_time() {
     _sec=`expr ${_cstime} / 100`
     _csec=`expr ${_cstime} % 100`
     _time="${_sec}.${_csec}"
-    echo ${_time}
+    printf "%d.%02d" ${_sec} ${_csec}
 }
 
 function get_stream_offset() {
@@ -51,7 +51,7 @@ function get_offset() {
     local _cstime
     _cstime=$1
     if [ ${_cstime} -le 100 ]; then
-        echo 0.${_cstime}
+        printf 0.%02d ${_cstime}
     else
         echo 1.0
     fi
