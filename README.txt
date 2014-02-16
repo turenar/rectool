@@ -1,8 +1,14 @@
+Functions:
+	-queued encode with avconv
+	-auto commercials removal with comskip
+
+	%% removed drop report function. You may get recomplete.php and
+	   check-drop.sh from https://github.com/turenar/epgrec
+
 Requirements:
 	libav-10(dev) with libfaac, libx264
-		recommend: 09cb75cd
 	atd
-	epgrec/epgrecUNA
+	epgrec/epgrecUNA/asuha
 	tsselect (ex. https://github.com/shesee/tsselect-linux)
 	php (>5.3)
 	comskip (https://github.com/Hiroyuki-Nagata/comskip)
