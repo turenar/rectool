@@ -39,7 +39,6 @@ if [ ${TUNER} -lt ${TUNER_UNIT} ]; then
 		elif [ ${MODE} = 3 ]; then
  	 		$RECORDER --b25 --strip --sid $SID $CHANNEL $DURATION "$OUTPUT" >/dev/null
 			echo "OUTPUT='${OUTPUT}' ${EPGREC_D}/do_encode.sh" | at -q F $(date +'%y-%m-%d')
-			( echo $OUTPUT; ionice -c 3 nice -n 19 /usr/local/bin/tsselect "${OUTPUT}" 2>/dev/null ) | mail -s 'drop report' root
 		else
 			$RECORDER --b25 --strip --sid $SID $CHANNEL $DURATION "$OUTPUT" >/dev/null
 		fi
