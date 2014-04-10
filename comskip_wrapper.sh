@@ -135,7 +135,7 @@ for _END__CSEC in ${_END__CSEC_ARRAY[@]}; do
     # ffmpeg -i <input_data> -ss <start_sec> -t <play_time> <output_data>
     echo ${FFMPEG} -loglevel 0 -y -ss ${BEGIN_OFFSET_TIME} -i "${TS_FILE}" -c copy -vcodec mpeg2video -ss ${BEGIN_TIME} -t ${PLAY_TIME} -sn `pwd`/"${FILE_NAME}-${FILE_PARTS}.ts"
     # if you use with mkfifo, run FFMPEG command IN BACKGROUND (just append &)
-    ${FFMPEG} -loglevel 0 -y -ss ${BEGIN_OFFSET_TIME} -i "${TS_FILE}" -c:a copy -c:v mpeg2video -q:v 1 -ss ${BEGIN_TIME} -t ${PLAY_TIME} -sn `pwd`/"${FILE_NAME}-${FILE_PARTS}.ts" &
+    ${FFMPEG} -loglevel error -y -ss ${BEGIN_OFFSET_TIME} -i "${TS_FILE}" -c:a copy -c:v mpeg2video -q:v 1 -ss ${BEGIN_TIME} -t ${PLAY_TIME} -sn `pwd`/"${FILE_NAME}-${FILE_PARTS}.ts" &
 done
 
 #
@@ -153,4 +153,7 @@ done
 
 OUTPUT_FILE="`pwd`/CUT-${FILE_NAME}ts"
 echo "${FFMPEG} -i \"${FFMPEG_CONCAT_STR}\" -c copy ${OUTPUT_FILE}"
-${FFMPEG} -loglevel 0 -y -i "${FFMPEG_CONCAT_STR}" -c copy "${OUTPUT_FILE}" &
+${FFMPEG} -loglevel error -y -i "${FFMPEG_CONCAT_STR}" -c copy "${OUTPUT_FILE}" &
+# error check
+sleep 5
+ps $! >/dev/null 2>&1 || exit 3
