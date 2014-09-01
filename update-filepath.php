@@ -147,8 +147,10 @@ $filelist = array_slice($argv, 1);
 foreach($filelist as $src){
 	if(!file_exists($src)){
 		echo "$src: not found.\n";
+		continue;
 	}else if(is_dir($src)){
 		echo "$src is directory! Abort.\n";
+		exit;
 	}
 	foreach($tsv_data as $regex => $dir){
 		if(copy_if($regex, $src, $dir)){
