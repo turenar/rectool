@@ -9,6 +9,7 @@ TMPDIR_DEFAULT=/tmp
 TMPDIR_LARGEFILE=/var/tmp
 #skip_cmcut=y
 FAIL_FILESIZE_RATIO="10 / 100"
+THROTTLE_SPEED=${enc_throttle-1024}
 
 export DISPLAY=:0
 
@@ -33,11 +34,12 @@ FNFULLPATH="$(readlink -f "${OUTPUT}")"
 FILENAME="$(basename "$OUTPUT")"
 FN_NOSUF="${FILENAME%.*}"
 
-echo "FILENAME: $FILENAME"
+#echo "FILENAME: $FILENAME"
 #echo "FN_NOSUF: $FN_NOSUF"
 
 cd "$(dirname "$OUTPUT")"
 OUT_FULL="$(readlink -f "${OUTPUT}")"
+echo "OUT_FULL: $OUT_FULL"
 
 if [ ! -e "${FILENAME}" ]; then
 	echo "file is not found. abort."
@@ -47,11 +49,16 @@ fi
 fullfile="${TO}/full/${FN_NOSUF}.mp4"
 nocmfile="${TO}/full/nocm-${FN_NOSUF}.mp4"
 
+THROTTLE_CMD=cat
 if [ "x${SSH_HOST}" \!= xlocalhost ]; then
-	SSH_CMD="ssh ${SSH_HOST} --"
+	SSH_CMD="ssh ${SSH_HOST} -- nice -n19 ionice -c 3"
 	SSH_EXEC="${SSH_CMD}"
-	SCP_CMD="scp"
+	SCP_CMD="scp -l ${THROTTLE_SPEED}"
+	if which throttle >/dev/null 2>&1; then
+		THROTTLE_CMD="throttle -k ${THROTTLE_SPEED}"
+	fi
 	OUTBUF_SIZE=64M
+	echo "Throttle speed: ${THROTTLE_SPEED}"
 else
 	SSH_CMD=":"
 	SSH_EXEC=""
@@ -85,7 +92,7 @@ if [ ! -v 'av_encskip' ]; then
 
 	# check source.ts
 	avconv -i "${OUTPUT}" > "${tempfile}/tsstat" 2>&1
-	
+
 	video_map="-map v"
 	audio_map="-map a"
 
@@ -96,11 +103,16 @@ if [ ! -v 'av_encskip' ]; then
 	remote_tmp=$(${SSH_CMD} mktemp)
 	remote_tmp=${remote_tmp:-${tempfile}/full.mp4}
 	dd if="${OUTPUT}" ibs=${BUFFER_SIZE} obs=${OUTBUF_SIZE} | \
+		${THROTTLE_CMD} | \
 		${SSH_EXEC} avconv -i pipe: -loglevel ${loglevel} -y \
 		-f mp4 -pre:v hq -vcodec libx264 -acodec libfaac -vsync 1 \
 		-r 30000/1001 -filter:v yadif -aspect 16:9 -crf ${CRFactor} \
 		-ss 00:00:01 ${video_map} ${audio_map} \
 		${remote_tmp} || exit 1
+	if [ "x${SSH_HOST}" \!= xlocalhost ]; then
+		exec 9>&-
+		echo Running scp...
+	fi
 	${SCP_CMD} ${SSH_HOST}:${remote_tmp} ${tempfile}/full.mp4
 	${SSH_CMD} rm -f ${remote_tmp}
 	echo "avconv with cm cut"
@@ -109,6 +121,14 @@ if [ ! -v 'av_encskip' ]; then
 	elif [[ "${FILENAME}" == GR* ]]; then
 		echo "skip because this file is GR*"
 	else
+		if [ "x${SSH_HOST}" \!= xlocalhost ]; then
+			exec 9>>/run/epgrec/encode-localhost.lock
+			flock -n 9
+			if [ $? -ne 0 ]; then
+				echo 'Waiting for exclusive lock...'
+				flock 9
+			fi
+		fi
 		ln -s "$(readlink -f "${OUTPUT}")" "${tempfile}/source.ts"
 		mkfifo "${tempfile}/CUT-source.ts"
 			cd "${tempfile}"
