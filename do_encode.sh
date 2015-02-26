@@ -87,7 +87,7 @@ if [ ! -v 'av_encskip' ]; then
 		echo "failed mktemp"
 		exit 1
 	fi
-	trap "echo removing temporaty files; rm -f ${tempfile}/*; rmdir ${tempfile}" EXIT
+	trap "ret=\$?; echo removing temporaty files; rm -f ${tempfile}/*; rmdir ${tempfile}; exit \$ret" EXIT
 	av_encfile="${OUTPUT}"
 
 	# check source.ts
