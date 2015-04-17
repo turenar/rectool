@@ -9,12 +9,14 @@ LOCK_DIR='/run/epgrec'
 MAILTO='INVALID MAIL ADDRESS@localhost'
 # interval to check not running worker
 QUEUE_RECHECK=60
+# video base dir
+VIDEO_BASE_DIR=/data/epgrec
 
 
 
 #exec >> /tmp/manager.log
 while true; do
-	for jost in ${ENCODE_HOSTS}; do
+	for jost in ${encode_hosts:-${ENCODE_HOSTS}}; do
 		host=${jost%/*}
 		job=${jost#*/}
 		if [ x${host} = x${job} ]; then
@@ -27,7 +29,9 @@ while true; do
 			if [ $? -eq 0 ]; then
 				trap 'kill $(jobs -p)' EXIT
 				echo "[manager] Running with ${host}#${i}"
-				enc_ssh=${host} $(dirname $0)/do_encode.sh "$@" 2>&1 | tee >(mail -s "Encode job: $@" ${MAILTO})
+				cd "${VIDEO_BASE_DIR}"
+				enc_ssh=${host} $(dirname $0)/do_encode.sh "$*" 2>&1 | tee >(mail -s "Encode job" ${MAILTO})
+				trap '' EXIT
 				exit $?
 			fi
 		done
