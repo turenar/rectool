@@ -6,10 +6,11 @@ BUFFER_SIZE=512M
 #6GB
 LARGE_FILE_SIZE=$((6 * 1024 * 1024 * 1024))
 TMPDIR_DEFAULT=/tmp
-TMPDIR_LARGEFILE=/var/tmp
+TMPDIR_LARGEFILE=/data/tmp
 #skip_cmcut=y
 FAIL_FILESIZE_RATIO="10 / 100"
 THROTTLE_SPEED=${enc_throttle-1024}
+NOT_FOUND_RETCODE=${enc_nofile_ret-0}
 
 export DISPLAY=:0
 
@@ -43,7 +44,7 @@ echo "OUT_FULL: $OUT_FULL"
 
 if [ ! -e "${FILENAME}" ]; then
 	echo "file is not found. abort."
-	exit 1
+	exit ${NOT_FOUND_RETCODE}
 fi
 
 fullfile="${TO}/full/${FN_NOSUF}.mp4"
@@ -54,11 +55,13 @@ if [ "x${SSH_HOST}" \!= xlocalhost ]; then
 	SSH_CMD="ssh ${SSH_HOST} -- nice -n19 ionice -c 3"
 	SSH_EXEC="${SSH_CMD}"
 	SCP_CMD="scp -l ${THROTTLE_SPEED}"
-	if which throttle >/dev/null 2>&1; then
+	if type throttle >/dev/null 2>&1; then
 		THROTTLE_CMD="throttle -k ${THROTTLE_SPEED}"
+		echo "Throttle speed: ${THROTTLE_SPEED}"
+	else
+		echo "Throttle disabled"
 	fi
 	OUTBUF_SIZE=64M
-	echo "Throttle speed: ${THROTTLE_SPEED}"
 else
 	SSH_CMD=":"
 	SSH_EXEC=""
@@ -99,7 +102,7 @@ if [ ! -v 'av_encskip' ]; then
 	#echo "video.map: ${video_map}"
 	#echo "audio.map: ${audio_map}"
 
-	echo "avconv with full"
+	echo "avconv with full on ${SSH_HOST}"
 	remote_tmp=$(${SSH_CMD} mktemp)
 	remote_tmp=${remote_tmp:-${tempfile}/full.mp4}
 	dd if="${OUTPUT}" ibs=${BUFFER_SIZE} obs=${OUTBUF_SIZE} | \
