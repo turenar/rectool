@@ -30,7 +30,10 @@ while true; do
 				trap 'kill $(jobs -p)' EXIT
 				echo "[manager] Running with ${host}#${i}"
 				cd "${VIDEO_BASE_DIR}"
-				enc_ssh=${host} $(dirname $0)/do_encode.sh "$*" 2>&1 | tee >(mail -s "Encode job" ${MAILTO})
+				if [ -n "$2" ]; then
+					export TRANS="$2"
+				fi
+				enc_ssh=${host} $(dirname $0)/do_encode.sh "$(basename "$*")" 2>&1 | tee >(mail -s "Encode job" ${MAILTO})
 				trap '' EXIT
 				exit $?
 			fi

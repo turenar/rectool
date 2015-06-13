@@ -18,7 +18,7 @@ if($argc<2){
 $dbh = @mysql_connect( $settings->db_host, $settings->db_user, $settings->db_pass );
 mysql_set_charset('utf8');
 try{
-	$r = new DBRecord(RESERVE_TBL, 'path', $argv[1]);
+	$r = new DBRecord(TRANSCODE_TBL, 'path', $argv[1]);
 }catch(exception $e){
 	echo "No record found\n";
 	exit(1);
