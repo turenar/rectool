@@ -2,11 +2,10 @@
 <?php
 
 $script_path = dirname(__FILE__);
-chdir($script_path);
 require_once($script_path . '/syobocal_config.php');
 
 function main($argv){
-	global $cfg;
+	global $cfg, $script_path;
 
 	$application_name = array_shift($argv);
 
@@ -76,7 +75,7 @@ function main($argv){
 	$url = "http://cal.syoboi.jp/rss2.php?start=$start_date&end=$end_date&usr={$cfg['user']}&alt=json";
 	$json = json_decode(file_get_contents($url), true);
 
-	$channelmap = json_decode(file_get_contents('syobocal_channel.json'), true);
+	$channelmap = json_decode(file_get_contents($script_path . '/syobocal_channel.json'), true);
 
 	$found = null;
 	$found_without_channel = null;
@@ -120,7 +119,67 @@ function main($argv){
 	$pattern['%Count%'] = $found['Count'];
 	$pattern['%SubTitle%'] = empty($found['SubTitle']) ? '' : $found['SubTitle'];
 	$pattern['%ext%'] = $extension;
-	echo strtr($new_path, $pattern);
+	$new_path = strtr($new_path, $pattern);
+	if ($no_action) {
+		echo $new_path;
+	} else {
+		safe_move($file_path, $new_path);
+	}
+}
+
+function safe_move($src, $dst){
+	global $cfg;
+
+	$dstdir = dirname($dst);
+
+	if(!file_exists($src)){
+		echo "E: source file is not exist: $src\n";
+		return false;
+	}
+	if(!is_dir($dstdir)) {
+		mkdir($dstdir, 0775, true);
+		chgrp($dstdir, $cfg['file_group']);
+	}
+
+	if(realpath($src)!==FALSE && realpath($src) === realpath($dst)){
+		echo "E: not have to move: $src\n";
+		return true;
+	}
+
+	link($src, "$src.bak");
+	echo "Moving '".basename($src)."' as '$dst'\n";
+	if(file_exists($dst)){
+		echo "Replacing...\n";
+		unlink($dst);
+	}
+
+	$srcstat = stat($src);
+	$dststat = stat($dstdir);
+	if($srcstat['dev'] === $dststat['dev']){
+		link($src, $dst);
+	}else{
+		echo "D:cross-dev\n";
+		copy($src, $dstfile);
+	}
+
+	if(!file_exists($dst)){
+		echo("$dst is not created! Abort\n");
+		if(!file_exists($src)){
+			echo("$src is deleted. recoverying\n");
+			rename("$src.bak", $src);
+		}
+		return true;
+	}
+	unlink("$src.bak");
+	//sleep(1);
+	//system("php '".EPGRDIR."/mediatomb-update.php' '".realpath($src)."' '".realpath($dstfile)."'", $retval);
+	/*while($retval) {
+		echo "Wait...";
+		sleep(1);
+		system("php '".EPGRDIR."/mediatomb-update.php' '".realpath($src)."' '".realpath($dstfile)."'", $retval);
+	}*/
+	unlink($src);
+	return true;
 }
 
 function get_season($year, $month) {
