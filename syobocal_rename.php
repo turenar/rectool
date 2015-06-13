@@ -5,7 +5,7 @@ $script_path = dirname(__FILE__);
 require_once($script_path . '/syobocal_config.php');
 
 function main($argv){
-	global $cfg, $script_path;
+	global $cfg;
 
 	$application_name = array_shift($argv);
 
@@ -75,7 +75,7 @@ function main($argv){
 	$url = "http://cal.syoboi.jp/rss2.php?start=$start_date&end=$end_date&usr={$cfg['user']}&alt=json";
 	$json = json_decode(file_get_contents($url), true);
 
-	$channelmap = json_decode(file_get_contents($script_path . '/syobocal_channel.json'), true);
+	$channelmap = $cfg['channel'];
 
 	$found = null;
 	$found_without_channel = null;
