@@ -11,11 +11,11 @@ function main($argv){
 
 	if($cfg['user'] == '<<UserID>>'){
 		fprintf(STDERR, "$application_name: illegal configuration (\$cfg['user'])\n");
-		exit(2);
+		exit(ERR_FATAL_CONFIG);
 	}
 
 	$no_action = false;
-	$file_path = null;
+	$file_path = array();
 	while(true){
 		$arg = array_shift($argv);
 		if($arg === null){
@@ -25,40 +25,44 @@ function main($argv){
 		} elseif ($arg[0] == '-') {
 			fprintf(STDERR, "$application_name: illegal option: $arg\n");
 		} else {
-			if ($file_path !== null) {
-				fprintf(STDERR, "$application_name: specify single file path\n");
-				exit(1);
-			}
-			$file_path = $arg;
+			$file_path[] = $arg;
 		}
 	}
 
-	if ($file_path === null) {
+	if (count($file_path) === 0) {
 		fprintf(STDERR, "missing argument\n");
 		fprintf(STDERR, "usage: $application_name [-n|--get-path] <path>\n");
-		exit(1);
+		exit(ERR_FATAL);
 	}
 
+	$cfg['run']['no_action'] = $no_action;
+
+	foreach ($file_path as $elem) {
+		process($elem, $cfg);
+	}
+}
+function process($file_path, $cfg) {
+	$no_action = $cfg['run']['no_action'];
 	$file_name = basename($file_path);
 	$result = preg_match($cfg['path_regex'], basename($file_name), $matches);
 	if ($result === false) {
-		fprintf(STDERR, "illegal regex syntax: {$cfg['path_regex']}\n");
-		exit(1);
+		fprintf(STDERR, "illegal regex syntax: %s\n", $cfg['path_regex']);
+		exit(ERR_FATAL_CONFIG);
 	}
 	if ($result === 0) {
-		fprintf(STDERR, "not match: {$cfg['path_regex']}\n");
-		exit(1);
+		fprintf(STDERR, "not match: %s (%s)\n", $cfg['path_regex'], $file_name);
+		return false;
 	}
 	if(!(isset($matches['channel']) && isset($matches['date']) && isset($matches['title']) && isset($matches['extension']))){
 		fprintf(STDERR, "illegal regex: {$cfg['path_regex']}\ncheck channel,date,title,extension named captures exist\n");
-		exit(1);
+		exit(ERR_FATAL_CONFIG);
 	}
 
 	$channel = $matches['channel'];
 	$date = DateTime::createFromFormat($cfg['date_format'], $matches['date']);
 	if($date === false){
 		fprintf(STDERR, "Illegal date format: %s as %s\n", $matches['date'], $cfg['date_format']);
-		exit(1);
+		exit(ERR_FATAL_CONFIG);
 	}
 	$start_date = DateTime::createFromFormat($cfg['date_format'], $matches['date']);
 	//$start_date->modify('-15 min');
@@ -102,7 +106,7 @@ function main($argv){
 			fprintf(STDERR, " progTitle=%s, progChName=%s\n", $program['Title'], $program['ChName']);
 			fprintf(STDERR, "Check your syobocal_channel.json\n");
 		}
-		exit(1);
+		exit(ERR_FATAL_CONFIG);
 	}
 
 	$url = "http://cal.syoboi.jp/db.php?Command=TitleLookup&TID={$program['TID']}";
@@ -193,4 +197,7 @@ function get_season($year, $month) {
 	return sprintf("%dY%dQ", $year, $quarter);
 }
 
+
+define('ERR_FATAL_CONFIG', 3);
+define('ERR_FATAL', 2);
 main($argv);
