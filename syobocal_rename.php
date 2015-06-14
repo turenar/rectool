@@ -119,6 +119,7 @@ function process($file_path, $cfg) {
 	$pattern['%Season%'] = get_season($title_data->FirstYear, $title_data->FirstMonth);
 	$pattern['%Title%'] = $found['Title'];
 	$pattern['%Channel%'] = $channel;
+	$pattern['%Date%'] = $matches['date'];
 	$pattern['%Extra%'] = isset($matches['extra']) ? $matches['extra'] : '';
 	$pattern['%Count%'] = $found['Count'];
 	$pattern['%SubTitle%'] = empty($found['SubTitle']) ? '' : $found['SubTitle'];
