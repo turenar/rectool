@@ -33,7 +33,7 @@ while true; do
 				if [ -n "$2" ]; then
 					export TRANS="$2"
 				fi
-				enc_ssh=${host} $(dirname $0)/do_encode.sh "$(basename "$*")" 2>&1 | tee >(mail -s "Encode job" ${MAILTO})
+				enc_ssh=${host} $(dirname $0)/do_encode.sh "$(basename "$1")" 2>&1 | tee >(mail -s "Encode job" ${MAILTO})
 				trap '' EXIT
 				exit $?
 			fi
