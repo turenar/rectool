@@ -3,6 +3,7 @@
 
 $script_path = dirname(__FILE__);
 require_once($script_path . '/syobocal_config.php');
+error_reporting(E_ALL|E_NOTICE);
 
 function main($argv){
 	global $cfg;
@@ -15,6 +16,7 @@ function main($argv){
 	}
 
 	$no_action = false;
+	$epgrec = false;
 	$file_path = array();
 	while(true){
 		$arg = array_shift($argv);
@@ -22,6 +24,8 @@ function main($argv){
 			break;
 		} elseif ($arg == '-n' || $arg == '--get-path') {
 			$no_action = true;
+		} elseif ($arg == '-e' || $arg == '--epgrec') {
+			$epgrec = true;
 		} elseif ($arg[0] == '-') {
 			fprintf(STDERR, "$application_name: illegal option: $arg\n");
 		} else {
@@ -29,12 +33,24 @@ function main($argv){
 		}
 	}
 
+	if ($epgrec) {
+		if(!file_exists(dirname(__FILE__).'/config.php')){
+			fprintf(STDERR, "$application_name: epgrec's config.php is not found\n");
+			exit(ERR_FATAL_CONFIG);
+		}
+		require_once(dirname(__FILE__).'/config.php');
+		include_once( INSTALL_PATH . '/DBRecord.class.php' );
+		include_once( INSTALL_PATH . '/Settings.class.php' );
+		include_once( INSTALL_PATH . '/reclib.php' );
+	}
+
 	if (count($file_path) === 0) {
 		fprintf(STDERR, "missing argument\n");
-		fprintf(STDERR, "usage: $application_name [-n|--get-path] <path>\n");
+		fprintf(STDERR, "usage: $application_name [-n|--get-path] [-e|--epgrec] <path>\n");
 		exit(ERR_FATAL);
 	}
 
+	$cfg['run']['epgrec'] = $epgrec;
 	$cfg['run']['no_action'] = $no_action;
 
 	foreach ($file_path as $elem) {
@@ -43,6 +59,7 @@ function main($argv){
 }
 function process($file_path, $cfg) {
 	$no_action = $cfg['run']['no_action'];
+	$epgrec = $cfg['run']['epgrec'];
 	$file_name = basename($file_path);
 	$result = preg_match($cfg['path_regex'], basename($file_name), $matches);
 	if ($result === false) {
@@ -86,14 +103,14 @@ function process($file_path, $cfg) {
 	foreach ($json['items'] as $program) {
 		$progChId = isset($channelmap[$program['ChName']]) ? $channelmap[$program['ChName']] : null;
 		$progTitle = Normalizer::normalize($program['Title'], Normalizer::FORM_KC);
-		$normTitle = substr(Normalizer::normalize($title, Normalizer::FORM_KC), 0, 5);
+		$normTitle = mb_substr(Normalizer::normalize($title, Normalizer::FORM_KC), 0, 5);
 		if (strpos($progTitle, $normTitle) !== false) {
 			if($progChId == $channel){
 				$found = $program;
+				break;
 			} else {
 				$found_without_channel = $program;
 			}
-			break;
 		}
 	}
 
@@ -129,6 +146,9 @@ function process($file_path, $cfg) {
 		echo $new_path;
 	} else {
 		safe_move($file_path, $new_path);
+		if ($epgrec) {
+			epgrec_update_path($file_path, $new_path);
+		}
 	}
 }
 
@@ -152,7 +172,7 @@ function safe_move($src, $dst){
 	}
 
 	link($src, "$src.bak");
-	echo "Moving '".basename($src)."' as '$dst'\n";
+	echo "'".basename($src)."' -> '$dst'\n";
 	if(file_exists($dst)){
 		echo "Replacing...\n";
 		unlink($dst);
@@ -176,6 +196,7 @@ function safe_move($src, $dst){
 		return true;
 	}
 	unlink("$src.bak");
+
 	//sleep(1);
 	//system("php '".EPGRDIR."/mediatomb-update.php' '".realpath($src)."' '".realpath($dstfile)."'", $retval);
 	/*while($retval) {
@@ -196,6 +217,35 @@ function get_season($year, $month) {
 		$quarter = 4;
 	}
 	return sprintf("%dY%dQ", $year, $quarter);
+}
+
+function epgrec_update_path($old, $new) {
+	global $cfg;
+
+	$setting = Settings::factory();
+	$old = strtr(realpath(dirname($old)).'/'.basename($old), $cfg['media_path']);
+	$new = strtr(realpath($new), $cfg['media_path']);
+
+	$conn = @new mysqli( $setting->db_host, $setting->db_user, $setting->db_pass , $setting->db_name);
+	if($conn->connect_error){
+		fprintf(STDERR, "failed to connect with mysql: (%d)%s\n", $conn->connect_errno, $conn->connect_error);
+		exit(ERR_FATAL);
+	}
+	if($stmt = $conn->prepare(sprintf('UPDATE `%s` SET `path` = ? WHERE `path` = ?', $setting->tbl_prefix.TRANSCODE_TBL))){
+		$stmt->bind_param('ss', $new, $old);
+		$stmt->execute();
+		if ($stmt->affected_rows === -1) {
+			fprintf(STDERR, " query error: (%d)%s\n", $stmt->errno, $stmt->error);
+			exit(ERR_FATAL);
+		} elseif ($stmt->affected_rows === 0) {
+			fprintf(STDERR, " specified path entry is not found (%s)\n", $old);
+			return false;
+		}
+		return true;
+	} else {
+		fprintf(STDERR, " query error: (%d)%s\n", $conn->errno, $conn->error);
+		exit(ERR_FATAL);
+	}
 }
 
 
