@@ -6,9 +6,15 @@ require_once($script_path . '/syobocal_config.php');
 error_reporting(E_ALL|E_NOTICE);
 
 class SyobocalRenamer {
+	const NONE = 0;
+	const ERR = 1;
+	const WARN = 2;
+	const INFO = 3;
+	const DEBUG = 4;
 
 	private $application_name;
 	private $cfg;
+	private $log_level = self::INFO;
 	private $flag_epgrec = false;
 	private $flag_no_action = false;
 	private $epgrec_config = null;
@@ -22,7 +28,7 @@ class SyobocalRenamer {
 		$this->application_name = array_shift($argv);
 
 		if($this->cfg['user'] == '<<UserID>>'){
-			fprintf(STDERR, "%s: illegal configuration (\$cfg['user'])\n", $this->application_name);
+			$this->_err("illegal configuration (\$cfg['user'])");
 			exit(ERR_FATAL_CONFIG);
 		}
 
@@ -38,7 +44,7 @@ class SyobocalRenamer {
 			} elseif ($arg == '-e' || $arg == '--epgrec') {
 				$epgrec = true;
 			} elseif ($arg[0] == '-') {
-				fprintf(STDERR, "%s: illegal option: %s\n", $this->application_name, $arg);
+				$this->_err("illegal option: %s\n", $arg);
 			} else {
 				$file_path[] = $arg;
 			}
@@ -46,7 +52,7 @@ class SyobocalRenamer {
 
 		if ($epgrec) {
 			if(!file_exists(dirname(__FILE__).'/config.php')){
-				fprintf(STDERR, "$application_name: epgrec's config.php is not found\n");
+				$this->_err("epgrec's config.php is not found");
 				exit(ERR_FATAL_CONFIG);
 			}
 			require_once(dirname(__FILE__).'/config.php');
@@ -56,7 +62,7 @@ class SyobocalRenamer {
 		}
 
 		if (count($file_path) === 0) {
-			fprintf(STDERR, "missing argument\n");
+			$this->_err("missing argument");
 			fprintf(STDERR, "usage: %s [-n|--get-path] [-e|--epgrec] <path>\n", $this->application_name);
 			exit(ERR_FATAL);
 		}
@@ -74,22 +80,23 @@ class SyobocalRenamer {
 		$file_name = basename($file_path);
 		$result = preg_match($cfg['path_regex'], basename($file_name), $matches);
 		if ($result === false) {
-			fprintf(STDERR, "illegal regex syntax: %s\n", $cfg['path_regex']);
+			$this->_err("illegal regex syntax: %s", $cfg['path_regex']);
 			exit(ERR_FATAL_CONFIG);
 		}
 		if ($result === 0) {
-			fprintf(STDERR, "not match: %s (%s)\n", $cfg['path_regex'], $file_name);
+			$this->_warn("not match: %s (%s)", $cfg['path_regex'], $file_name);
 			return false;
 		}
 		if(!(isset($matches['channel']) && isset($matches['date']) && isset($matches['title']) && isset($matches['extension']))){
-			fprintf(STDERR, "illegal regex: {$cfg['path_regex']}\ncheck channel,date,title,extension named captures exist\n");
+			$this->_err("illegal regex: %s", $cfg['path_regex']);
+			$this->_err(" check channel,date,title,extension named captures exist");
 			exit(ERR_FATAL_CONFIG);
 		}
 
 		$channel = $matches['channel'];
 		$date = DateTime::createFromFormat($cfg['date_format'], $matches['date']);
 		if($date === false){
-			fprintf(STDERR, "Illegal date format: %s as %s\n", $matches['date'], $cfg['date_format']);
+			$this->_err("Illegal date format: %s as %s", $matches['date'], $cfg['date_format']);
 			exit(ERR_FATAL_CONFIG);
 		}
 		$start_date = DateTime::createFromFormat($cfg['date_format'], $matches['date']);
@@ -127,12 +134,12 @@ class SyobocalRenamer {
 
 		if ($found === null) {
 			if ($found_without_channel === null) {
-				fprintf(STDERR, "Specified program is not found. title=%s\n", $title);
+				$this->_err("Specified program is not found. title=%s", $title);
 			} else {
-				fprintf(STDERR, "Specified named program seems to be found, but channel is not matched.\n");
-				fprintf(STDERR, " title=%s, channel=%s\n", $title, $channel);
-				fprintf(STDERR, " progTitle=%s, progChName=%s\n", $program['Title'], $program['ChName']);
-				fprintf(STDERR, "Check your syobocal_channel.json\n");
+				$this->_err("Specified named program seems to be found, but channel is not matched.");
+				$this->_err(" title=%s, channel=%s", $title, $channel);
+				$this->_err(" progTitle=%s, progChName=%s", $program['Title'], $program['ChName']);
+				$this->_err("Check your syobocal_channel.json");
 			}
 			exit(ERR_FATAL_CONFIG);
 		}
@@ -236,7 +243,7 @@ class SyobocalRenamer {
 		if ($this->epgrec_dbconn === null) {
 			$conn = @new mysqli( $setting->db_host, $setting->db_user, $setting->db_pass , $setting->db_name);
 			if($conn->connect_error){
-				fprintf(STDERR, "failed to connect with mysql: (%d)%s\n", $conn->connect_errno, $conn->connect_error);
+				$this->_err("failed to connect with mysql: (%d)%s", $conn->connect_errno, $conn->connect_error);
 				exit(ERR_FATAL);
 			}
 			$this->epgrec_dbconn = $conn;
@@ -252,17 +259,45 @@ class SyobocalRenamer {
 			$stmt->bind_param('ss', $new, $old);
 			$stmt->execute();
 			if ($stmt->affected_rows === -1) {
-				fprintf(STDERR, " query error: (%d)%s\n", $stmt->errno, $stmt->error);
+				$this->_err(" query error: (%d)%s", $stmt->errno, $stmt->error);
 				exit(ERR_FATAL);
 			} elseif ($stmt->affected_rows === 0) {
-				fprintf(STDERR, " specified path entry is not found (%s)\n", $old);
+				$this->_warn(" specified path entry is not found (%s)", $old);
 				return false;
 			}
 			return true;
 		} else {
-			fprintf(STDERR, " query error: (%d)%s\n", $conn->errno, $conn->error);
+			$this->_err(" query error: (%d)%s", $conn->errno, $conn->error);
 			exit(ERR_FATAL);
 		}
+	}
+
+	function _log($level, $head, $format_args /*, ...*/) {
+		if ($this->log_level >= $level) {
+			$format = "%s: " . $format_args[0] . "\n";
+			$format_args[0] = $head;
+			vfprintf(STDERR, $format, $format_args);
+		}
+	}
+
+	function _err($message) {
+		$format = func_get_args();
+		$this->_log(self::ERR, 'E', $format);
+	}
+
+	function _warn($message) {
+		$format = func_get_args();
+		$this->_log(self::WARN, 'W', $format);
+	}
+
+	function _info($message) {
+		$format = func_get_args();
+		$this->_log(self::INFO, 'I', $format);
+	}
+
+	function _dbg($message) {
+		$format = func_get_args();
+		$this->_log(self::DEBUG, 'D', $format);
 	}
 }
 
