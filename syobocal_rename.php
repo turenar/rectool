@@ -111,10 +111,35 @@ class SyobocalRenamer {
 
 		$title = strtr($title, $cfg['replace']['pre']);
 
-		$url = "http://cal.syoboi.jp/rss2.php?start=$start_date&end=$end_date&usr={$cfg['user']}&alt=json";
+		$found = $this->search_program($start_date, $end_date, $channel, $title);
+
+		$new_path = $cfg['new_path'];
+		$pattern = array();
+		$pattern['%Season%'] = $this->search_season($found['TID']);
+		$pattern['%Title%'] = $found['Title'];
+		$pattern['%Channel%'] = $channel;
+		$pattern['%Date%'] = $matches['date'];
+		$pattern['%Extra%'] = isset($matches['extra']) ? $matches['extra'] : '';
+		$pattern['%Count%'] = $found['Count'];
+		$pattern['%SubTitle%'] = empty($found['SubTitle']) ? '' : $found['SubTitle'];
+		$pattern['%ext%'] = $extension;
+		$new_path = strtr($new_path, $pattern);
+		if ($this->flag_no_action) {
+			echo $new_path."\n";
+		} else {
+			$this->safe_move($file_path, $new_path);
+			if ($this->flag_epgrec) {
+				$this->epgrec_update_path($file_path, $new_path);
+			}
+		}
+	}
+
+	function search_program($start_date, $end_date, $channel, $title) {
+		$url = sprintf("http://cal.syoboi.jp/rss2.php?start=%s&end=&usr=%s&alt=json",
+			$start_date, $end_date, urlencode($this->cfg['user']));
 		$json = json_decode(file_get_contents($url), true);
 
-		$channelmap = $cfg['channel'];
+		$channelmap = $this->cfg['channel'];
 
 		$found = null;
 		$found_without_channel = null;
@@ -143,31 +168,16 @@ class SyobocalRenamer {
 			}
 			exit(ERR_FATAL_CONFIG);
 		}
+		return $found;
+	}
 
-		$url = "http://cal.syoboi.jp/db.php?Command=TitleLookup&TID={$program['TID']}";
+	function search_season($titleId) {
+		$url = "http://cal.syoboi.jp/db.php?Command=TitleLookup&TID=$titleId";
 
 		$title_data = simplexml_load_string(file_get_contents($url));
 		$title_data = $title_data->TitleItems->TitleItem;
 
-		$new_path = $cfg['new_path'];
-		$pattern = array();
-		$pattern['%Season%'] = self::get_season($title_data->FirstYear, $title_data->FirstMonth);
-		$pattern['%Title%'] = $found['Title'];
-		$pattern['%Channel%'] = $channel;
-		$pattern['%Date%'] = $matches['date'];
-		$pattern['%Extra%'] = isset($matches['extra']) ? $matches['extra'] : '';
-		$pattern['%Count%'] = $found['Count'];
-		$pattern['%SubTitle%'] = empty($found['SubTitle']) ? '' : $found['SubTitle'];
-		$pattern['%ext%'] = $extension;
-		$new_path = strtr($new_path, $pattern);
-		if ($this->flag_no_action) {
-			echo $new_path."\n";
-		} else {
-			$this->safe_move($file_path, $new_path);
-			if ($this->flag_epgrec) {
-				$this->epgrec_update_path($file_path, $new_path);
-			}
-		}
+		return self::get_season($title_data->FirstYear, $title_data->FirstMonth);
 	}
 
 	function safe_move($src, $dst){
