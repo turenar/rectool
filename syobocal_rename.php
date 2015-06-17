@@ -177,7 +177,11 @@ class SyobocalRenamer {
 		$title_data = simplexml_load_string(file_get_contents($url));
 		$title_data = $title_data->TitleItems->TitleItem;
 
-		return self::get_season($title_data->FirstYear, $title_data->FirstMonth);
+		if (empty($title_data->FirstYear) || empty($title_data->FirstMonth)) {
+			return "unknown";
+		} else {
+			return self::get_season($title_data->FirstYear, $title_data->FirstMonth);
+		}
 	}
 
 	function safe_move($src, $dst){
