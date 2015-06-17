@@ -44,7 +44,7 @@ class SyobocalRenamer {
 			} elseif ($arg == '-e' || $arg == '--epgrec') {
 				$epgrec = true;
 			} elseif ($arg[0] == '-') {
-				$this->_err("illegal option: %s\n", $arg);
+				$this->_err("illegal option: %s", $arg);
 			} else {
 				$file_path[] = $arg;
 			}
@@ -135,7 +135,7 @@ class SyobocalRenamer {
 	}
 
 	function search_program($start_date, $end_date, $channel, $title) {
-		$url = sprintf("http://cal.syoboi.jp/rss2.php?start=%s&end=&usr=%s&alt=json",
+		$url = sprintf("http://cal.syoboi.jp/rss2.php?start=%s&end=%s&usr=%s&alt=json",
 			$start_date, $end_date, urlencode($this->cfg['user']));
 		$json = json_decode(file_get_contents($url), true);
 
@@ -184,7 +184,7 @@ class SyobocalRenamer {
 		$dstdir = dirname($dst);
 
 		if(!file_exists($src)){
-			echo "E: source file is not exist: $src\n";
+			$this->_err("source file is not exist: %d", $src);
 			return false;
 		}
 		if(!is_dir($dstdir)) {
@@ -193,14 +193,14 @@ class SyobocalRenamer {
 		}
 
 		if(realpath($src)!==FALSE && realpath($src) === realpath($dst)){
-			echo "E: not have to move: $src\n";
+			$this->_err("not have to move: %s", $src);
 			return true;
 		}
 
 		link($src, "$src.bak");
 		echo "".basename($src)." -> $dst\n";
 		if(file_exists($dst)){
-			echo "Replacing...\n";
+			$this->_info("Replacing...");
 			unlink($dst);
 		}
 
@@ -209,14 +209,14 @@ class SyobocalRenamer {
 		if($srcstat['dev'] === $dststat['dev']){
 			link($src, $dst);
 		}else{
-			echo "D:cross-dev\n";
+			$this->_info("cross-dev");
 			copy($src, $dstfile);
 		}
 
 		if(!file_exists($dst)){
-			echo("$dst is not created! Abort\n");
+			$this->_err("%s is not created! Abort", $dst);
 			if(!file_exists($src)){
-				echo("$src is deleted. recoverying\n");
+				$this->_err("%s is deleted. recoverying", $src);
 				rename("$src.bak", $src);
 			}
 			return true;
