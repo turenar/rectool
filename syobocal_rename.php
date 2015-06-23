@@ -494,9 +494,9 @@ class ArgParser {
 			$next_called = false;
 			$cur = current($argv);
 			if ($saved_arg !== null) {
-				$opt = $saved_arg[0];
+				$opt = '-'.$saved_arg[0];
 				$arg = substr($saved_arg, 1);
-				$saved_arg = $arg;
+				$saved_arg = strlen($arg) === 0 ? null : $arg;
 			} elseif ($cur === '--') {
 				while(next($argv) !== false) {
 					$this->arguments[] = current($argv);
@@ -518,7 +518,7 @@ class ArgParser {
 					$arg = next($argv);
 					$next_called = true;
 				} else {
-					$saved_arg = $cur;
+					$saved_arg = substr($cur, 1);
 					continue;
 				}
 			} else {
