@@ -49,7 +49,7 @@ EOT;
 	}
 
 	function run($argv){
-		$this->application_name = array_shift($argv);
+		$this->application_name = $argv[0];
 
 		if($this->cfg['user'] == '<<UserID>>'){
 			$this->_err("illegal configuration (\$cfg['user'])");
@@ -58,13 +58,12 @@ EOT;
 
 		$no_action = false;
 		$epgrec = false;
-		$file_path = array();
-		while(true){
-			$arg = array_shift($argv);
-			if($arg === null){
-				break;
-			}
-			switch ($arg) {
+
+		$parser = new ArgParser('dehnq', array('--debug', '--epgrec', '--help', '--get-path', '--quiet'));
+		$parser->parse($argv);
+		$options = $parser->getopts();
+		foreach ($options as $opt) {
+			switch ($opt[0]) {
 			case '-d':
 			case '--debug':
 				$this->log_level = self::DEBUG;
@@ -86,13 +85,11 @@ EOT;
 				$this->log_level = self::ERROR;
 				break;
 			default:
-				if ($arg[0] == '-') {
-					$this->_err("illegal option: %s", $arg);
-				} else {
-					$file_path[] = $arg;
-				}
+				$this->_err("illegal option: %s", $opt[0]);
 			}
 		}
+
+		$file_path = $parser->getargs();
 
 		if ($epgrec) {
 			if(!file_exists(dirname(__FILE__).'/config.php')){
@@ -457,6 +454,111 @@ EOT;
 		if (!$this->cache_db->exec($sql)) {
 			$this->_err("Failed sql (%d:%s) %s", $this->cache_db->lastErrorCode(), $this->cache_db->lastErrorMsg(), $sql);
 		}
+	}
+}
+
+class ArgParser {
+	// K: -a or --hoge / V: ''(no arg), ':'(required arg), '::'(optional arg)
+	private $opts;
+	private $options;
+	private $arguments;
+
+	function __construct($shortopt, $longopt) {
+		$opts = array();
+		preg_match_all('/([a-zA-Z0-9])(:{0,2})/', $shortopt, $shortopts, PREG_SET_ORDER);
+		foreach ($shortopts as $opt) {
+			$opts['-'.$opt[1]] = $opt[2];
+		}
+		foreach ($longopt as $opt) {
+			$argtype = '';
+			if (substr($opt, -2) === '::') {
+				$opt = substr($opt, 0, -2);
+				$argtype = '::';
+			} elseif (substr($opt, -1) === ':') {
+				$opt = substr($opt, 0, -1);
+				$argtype = ':';
+			}
+			$opts['--'.$opt] = $argtype;
+		}
+		$this->opts = $opts;
+	}
+
+	function parse($argv) {
+		reset($argv);
+		next($argv); // skip $argv[0]: application name
+		$this->options = array();
+		$this->arguments = array();
+		$saved_arg = null;
+		while(current($argv) !== false) {
+			$next_called = false;
+			$cur = current($argv);
+			if ($saved_arg !== null) {
+				$opt = $saved_arg[0];
+				$arg = substr($saved_arg, 1);
+				$saved_arg = $arg;
+			} elseif ($cur === '--') {
+				while(next($argv) !== false) {
+					$this->arguments[] = current($argv);
+				}
+				break;
+			} elseif (strpos($cur, '--') === 0) {
+				$argsep = strpos($cur, '=');
+				if ($argsep === false) {
+					$opt = $cur;
+					$arg = next($argv);
+					$next_called = true;
+				} else {
+					$opt = substr($cur, 0, $argsep);
+					$arg = substr($cur, $argsep+1);
+				}
+			} elseif ($cur[0] === '-') {
+				if (strlen($cur) === 2) {
+					$opt = $cur;
+					$arg = next($argv);
+					$next_called = true;
+				} else {
+					$saved_arg = $cur;
+					continue;
+				}
+			} else {
+				$this->arguments[] = $cur;
+				next($argv);
+				continue;
+			}
+
+			// check opt is supported
+			if (!isset($this->opts[$opt])) {
+				// unknown option
+				$this->options[] = array($opt, null);
+			} else {
+				$argtype = $this->opts[$opt];
+				if (($argtype === ':' && $arg !== false) || ($argtype === '::' && ($opt === false || $opt[0] !== '-'))) {
+					$this->options[] = array($opt, $arg);
+					$saved_arg = null;
+				} elseif ($argtype === '') {
+					$arg_consumed = false;
+					$this->options[] = array($opt, null);
+					if ($next_called) {
+						prev($argv);
+					}
+				} else {
+					// arg is required
+					fprintf(STDERR, "%s: %s requires argument\n", basename($argv[0]), $opt);
+					exit(1);
+				}
+				if ($saved_arg === null) {
+					next($argv);
+				}
+			}
+		}
+	}
+
+	function getopts() {
+		return $this->options;
+	}
+
+	function getargs() {
+		return $this->arguments;
 	}
 }
 
