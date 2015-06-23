@@ -37,6 +37,7 @@ EOT;
 	private $cache_db;
 
 	private $flag_epgrec = false;
+	private $flag_interactive = false;
 	private $flag_no_action = false;
 	private $epgrec_config = null;
 	private $epgrec_dbconn = null;
@@ -44,6 +45,8 @@ EOT;
 	function __construct($cfg){
 		global $script_path;
 		$this->cfg = $cfg;
+
+		$this->cfg['channel'] = json_decode(file_get_contents($script_path . '/syobocal_channel.json'), true);
 
 		$this->cache_db = new SQLite3($script_path . '/syobocal_cache.db');
 	}
@@ -56,10 +59,7 @@ EOT;
 			exit(ERR_FATAL_CONFIG);
 		}
 
-		$no_action = false;
-		$epgrec = false;
-
-		$parser = new ArgParser('dehnq', array('--debug', '--epgrec', '--help', '--get-path', '--quiet'));
+		$parser = new ArgParser('dehinq', array('--debug', '--epgrec', '--help', '--interactive', '--get-path', '--quiet'));
 		$parser->parse($argv);
 		$options = $parser->getopts();
 		foreach ($options as $opt) {
@@ -70,15 +70,18 @@ EOT;
 				break;
 			case '-e':
 			case '--epgrec':
-				$epgrec = true;
+				$this->flag_epgrec = true;
 				break;
 			case '-h':
 			case '--help':
 				$this->help();
 				exit(0);
+			case '-i':
+			case '--interactive':
+				$this->flag_interactive = true;
 			case '-n':
 			case '--get-path':
-				$no_action = true;
+				$this->flag_no_action = true;
 				break;
 			case '-q':
 			case '--quiet':
@@ -91,7 +94,7 @@ EOT;
 
 		$file_path = $parser->getargs();
 
-		if ($epgrec) {
+		if ($this->flag_epgrec) {
 			if(!file_exists(dirname(__FILE__).'/config.php')){
 				$this->_err("epgrec's config.php is not found");
 				exit(ERR_FATAL_CONFIG);
@@ -107,9 +110,6 @@ EOT;
 			fprintf(STDERR, "usage: %s [-n|--get-path] [-e|--epgrec] <path>\n", $this->application_name);
 			exit(ERR_FATAL);
 		}
-
-		$this->flag_epgrec = $epgrec;
-		$this->flag_no_action = $no_action;
 
 		$this->update_db();
 
@@ -246,6 +246,29 @@ EOT;
 		if ($found === null) {
 			if (count($found_without_channel) === 0) {
 				$this->_err("Specified program is not found. title=%s", $title);
+			} elseif ($this->flag_interactive) {
+				$this->_info("Specified named program seems to be found, but channel is not matched.");
+				$this->_info(" Target: '%s' (%s) %s", $title, $channel, $start_date->format('Y-m-d H:i:s'));
+				foreach ($found_without_channel as $key => $program) {
+					$prog_start = strftime('%Y-%m-%d %H:%M:%S', $program['StTime']);
+					$prog_end   = strftime('%Y-%m-%d %H:%M:%S', $program['EdTime']);
+					$this->_info(" [%d] '%s' (%s) %s-%s", $key, $program['Title'], $program['ChName'],
+						$prog_start, $prog_end);
+				}
+				$this->_info("Select your action or enter 'q' to exit");
+
+				while(true) {
+					$answer = trim(fgets(STDIN));
+					if ($answer === false || $answer === 'q') {
+						exit(0);
+					} elseif (isset($found_without_channel[$answer])) {
+						$program = $found_without_channel[$answer];
+						$this->add_channel($program['ChName'], $channel);
+						return $this->search_program($start_date, $end_date, $channel, $title);
+					} else {
+						$this->_warn('unknown operation');
+					}
+				}
 			} else {
 				$this->_err("Specified named program seems to be found, but channel is not matched.");
 				$this->_err(" title=%s, channel=%s", $title, $channel);
@@ -257,6 +280,12 @@ EOT;
 			exit(ERR_FATAL_CONFIG);
 		}
 		return $found;
+	}
+
+	function add_channel($name, $channel) {
+		global $script_path;
+		$this->cfg['channel'][$name] = $channel;
+		file_put_contents($script_path . '/syobocal_channel.json', json_encode($this->cfg['channel'], JSON_PRETTY_PRINT|JSON_UNESCAPED_UNICODE));
 	}
 
 	function search_season($title_id) {

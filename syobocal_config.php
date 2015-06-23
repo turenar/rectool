@@ -13,7 +13,6 @@ $cfg['media_path'] = array(
 
 {
 $cfg['replace'] = json_decode(file_get_contents($script_path . "/syobocal_replace.json"), true);
-$cfg['channel'] = json_decode(file_get_contents($script_path . '/syobocal_channel.json'), true);
 }
 
 date_default_timezone_set('Asia/Tokyo');
