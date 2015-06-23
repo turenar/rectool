@@ -94,6 +94,7 @@ EOT;
 
 		$file_path = $parser->getargs();
 
+		$this->_dbg("syobocal user: %s", $this->cfg['user']);
 		if ($this->flag_epgrec) {
 			if(!file_exists(dirname(__FILE__).'/config.php')){
 				$this->_err("epgrec's config.php is not found");
@@ -154,6 +155,10 @@ EOT;
 		$title = strtr($title, $cfg['replace']['pre']);
 
 		$found = $this->search_program($start_date, $end_date, $channel, $title);
+
+		if ($found === null) {
+			return false;
+		}
 
 		$new_path = $cfg['new_path'];
 		$pattern = array();
@@ -246,6 +251,7 @@ EOT;
 		if ($found === null) {
 			if (count($found_without_channel) === 0) {
 				$this->_err("Specified program is not found. title=%s", $title);
+				return null;
 			} elseif ($this->flag_interactive) {
 				$this->_info("Specified named program seems to be found, but channel is not matched.");
 				$this->_info(" Target: '%s' (%s) %s", $title, $channel, $start_date->format('Y-m-d H:i:s'));
@@ -276,8 +282,8 @@ EOT;
 					$this->_err(" progTitle=%s, progChName=%s", $program['Title'], $program['ChName']);
 				}
 				$this->_err("Check your syobocal_channel.json");
+				return null;
 			}
-			exit(ERR_FATAL_CONFIG);
 		}
 		return $found;
 	}
