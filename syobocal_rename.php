@@ -46,7 +46,12 @@ EOT;
 		global $script_path;
 		$this->cfg = $cfg;
 
-		$this->cfg['channel'] = json_decode(file_get_contents($script_path . '/syobocal_channel.json'), true);
+		$channel_json = $script_path.'/syobocal_channel.json';
+		if (file_exists($channel_json)) {
+			$this->cfg['channel'] = json_decode(file_get_contents($script_path . '/syobocal_channel.json'), true);
+		} else {
+			$this->cfg['channel'] = array();
+		}
 
 		$this->cache_db = new SQLite3($script_path . '/syobocal_cache.db');
 	}
