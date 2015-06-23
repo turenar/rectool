@@ -290,6 +290,7 @@ EOT;
 			$stmt->bindParam('title_id', $title_id, SQLITE3_INTEGER);
 			$stmt->bindParam('season', $season, SQLITE3_TEXT);
 			$result = $stmt->execute();
+			return $season;
 		}
 	}
 
