@@ -6,6 +6,25 @@ require_once($script_path . '/syobocal_config.php');
 error_reporting(E_ALL|E_NOTICE);
 
 class SyobocalRenamer {
+	function help() {
+		echo <<<EOT
+Usage: {$this->application_name} [OPTION]... [PATH]...
+Rename the specified PATHs
+
+  -d, --debug      output more noisy information for debugger
+  -e, --epgrec     enable epgrec path update feature
+                   this requires epgrec's config.php is existing
+		    in application dir
+  -h, --help       display this help and exit
+  -n, --get-path   get paths to rename the PATHs
+		   output order is PATHs order
+  -q, --quiet      suppress stderr output but error
+
+This application caches SyoboiCalendar's data for less network traffic.
+Cached data is found in syobocal_cache.db as sqlite3 database.
+EOT;
+	}
+
 	const NONE = 0;
 	const ERR = 1;
 	const WARN = 2;
@@ -44,16 +63,34 @@ class SyobocalRenamer {
 			$arg = array_shift($argv);
 			if($arg === null){
 				break;
-			} elseif ($arg == '-d' || $arg == '--debug') {
+			}
+			switch ($arg) {
+			case '-d':
+			case '--debug':
 				$this->log_level = self::DEBUG;
-			} elseif ($arg == '-n' || $arg == '--get-path') {
-				$no_action = true;
-			} elseif ($arg == '-e' || $arg == '--epgrec') {
+				break;
+			case '-e':
+			case '--epgrec':
 				$epgrec = true;
-			} elseif ($arg[0] == '-') {
-				$this->_err("illegal option: %s", $arg);
-			} else {
-				$file_path[] = $arg;
+				break;
+			case '-h':
+			case '--help':
+				$this->help();
+				exit(0);
+			case '-n':
+			case '--get-path':
+				$no_action = true;
+				break;
+			case '-q':
+			case '--quiet':
+				$this->log_level = self::ERROR;
+				break;
+			default:
+				if ($arg[0] == '-') {
+					$this->_err("illegal option: %s", $arg);
+				} else {
+					$file_path[] = $arg;
+				}
 			}
 		}
 
