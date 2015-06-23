@@ -11,14 +11,16 @@ class SyobocalRenamer {
 Usage: {$this->application_name} [OPTION]... [PATH]...
 Rename the specified PATHs
 
-  -d, --debug      output more noisy information for debugger
-  -e, --epgrec     enable epgrec path update feature
-                   this requires epgrec's config.php is existing
-		    in application dir
-  -h, --help       display this help and exit
-  -n, --get-path   get paths to rename the PATHs
-		   output order is PATHs order
-  -q, --quiet      suppress stderr output but error
+  -d, --debug         output more noisy information for debugger
+  -e, --epgrec        enable epgrec path update feature
+                      this requires epgrec's config.php is existing
+		       in application dir
+  -h, --help          display this help and exit
+  -i, --interactive   prompt the user whether to modify channel config
+                      this can modify syobocal_channel.json
+  -n, --get-path      get paths to rename the PATHs
+		      output order is PATHs order
+  -q, --quiet         suppress stderr output but error
 
 This application caches SyoboiCalendar's data for less network traffic.
 Cached data is found in syobocal_cache.db as sqlite3 database.
