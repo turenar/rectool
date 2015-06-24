@@ -11,16 +11,25 @@ class SyobocalRenamer {
 Usage: {$this->application_name} [OPTION]... [PATH]...
 Rename the specified PATHs
 
-  -d, --debug         output more noisy information for debugger
-  -e, --epgrec        enable epgrec path update feature
-                      this requires epgrec's config.php is existing
-		       in application dir
-  -h, --help          display this help and exit
-  -i, --interactive   prompt the user whether to modify channel config
-                      this can modify syobocal_channel.json
-  -n, --get-path      get paths to rename the PATHs
-		      output order is PATHs order
-  -q, --quiet         suppress stderr output but error
+  -d, --debug                output more noisy information for debugger
+  -e, --epgrec               enable epgrec path update feature
+                             this requires epgrec's config.php is existing
+		              in application dir
+  -f, --fallback[=PROG]      fallback to exec external process
+			      if syobocal has no info for specified file
+                             this option conflicts with --get-path
+                             PROG must be runnable file
+			      (default: \$APPDIR/update-filepath.php)
+  -h, --help                 display this help and exit
+  -i, --interactive          prompt the user whether to modify channel config
+                             this can modify syobocal_channel.json
+  -n, --get-path             get renamed path in specified PATHs order
+                             this conflicts with --fallback
+  -q, --quiet                suppress stderr output but error
+
+Configuration:
+  \$APPDIR:
+     This is not editable from user. This var is extracted as \$(basename "$0")
 
 This application caches SyoboiCalendar's data for less network traffic.
 Cached data is found in syobocal_cache.db as sqlite3 database.
@@ -39,6 +48,7 @@ EOT;
 	private $cache_db;
 
 	private $flag_epgrec = false;
+	private $flag_fallback_prog = null;
 	private $flag_interactive = false;
 	private $flag_no_action = false;
 	private $epgrec_config = null;
@@ -59,6 +69,7 @@ EOT;
 	}
 
 	function run($argv){
+		global $script_path;
 		$this->application_name = $argv[0];
 
 		if($this->cfg['user'] == '<<UserID>>'){
@@ -66,7 +77,8 @@ EOT;
 			exit(ERR_FATAL_CONFIG);
 		}
 
-		$parser = new ArgParser('dehinq', array('--debug', '--epgrec', '--help', '--interactive', '--get-path', '--quiet'));
+		$parser = new ArgParser('def::hinq',
+			array('--debug', '--epgrec', '--fallback::', '--help', '--interactive', '--get-path', '--quiet'));
 		$parser->parse($argv);
 		$options = $parser->getopts();
 		foreach ($options as $opt) {
@@ -78,6 +90,14 @@ EOT;
 			case '-e':
 			case '--epgrec':
 				$this->flag_epgrec = true;
+				break;
+			case '-f':
+			case '--fallback':
+				if ($opt[1] !== null) {
+					$this->flag_fallback_prog = $opt[1];
+				} elseif ($this->flag_fallback_prog === null) {
+					$this->flag_fallback_prog = $script_path.'/update-filepath.php';
+				}
 				break;
 			case '-h':
 			case '--help':
@@ -101,6 +121,16 @@ EOT;
 
 		$file_path = $parser->getargs();
 
+		if (count($file_path) === 0) {
+			$this->_err("missing argument");
+			fprintf(STDERR, "see `%s --help'\n", $this->application_name);
+			exit(ERR_FATAL);
+		}
+
+		if ($this->flag_no_action && $this->flag_fallback_prog !== null) {
+			$this->_err('options: --get-path and --fallback are incompatible');
+		}
+
 		$this->_dbg("syobocal user: %s", $this->cfg['user']);
 		if ($this->flag_epgrec) {
 			if(!file_exists(dirname(__FILE__).'/config.php')){
@@ -111,12 +141,6 @@ EOT;
 			include_once( INSTALL_PATH . '/DBRecord.class.php' );
 			include_once( INSTALL_PATH . '/Settings.class.php' );
 			include_once( INSTALL_PATH . '/reclib.php' );
-		}
-
-		if (count($file_path) === 0) {
-			$this->_err("missing argument");
-			fprintf(STDERR, "usage: %s [-n|--get-path] [-e|--epgrec] <path>\n", $this->application_name);
-			exit(ERR_FATAL);
 		}
 
 		$this->update_db();
@@ -164,6 +188,9 @@ EOT;
 		$found = $this->search_program($start_date, $end_date, $channel, $title);
 
 		if ($found === null) {
+			if ($this->flag_fallback_prog !== null) {
+				$this->exec_fallback_prog($file_path);
+			}
 			return false;
 		}
 
@@ -186,6 +213,12 @@ EOT;
 				$this->epgrec_update_path($file_path, $new_path);
 			}
 		}
+	}
+
+	function exec_fallback_prog($file_path) {
+		$this->_info(' fallbacking...');
+		passthru($this->flag_fallback_prog.' '.escapeshellarg($file_path), $exit_status);
+		$this->_info('  exit status: %d', $exit_status);
 	}
 
 	function search_program($start_date, $end_date, $channel, $title) {
@@ -575,10 +608,10 @@ class ArgParser {
 				$this->options[] = array($opt, null);
 			} else {
 				$argtype = $this->opts[$opt];
-				if (($argtype === ':' && $arg !== false) || ($argtype === '::' && ($opt === false || $opt[0] !== '-'))) {
+				if (($argtype === ':' && $arg !== false) || ($argtype === '::' && !$next_called)) {
 					$this->options[] = array($opt, $arg);
 					$saved_arg = null;
-				} elseif ($argtype === '') {
+				} elseif ($argtype === '' || $argtype === '::') {
 					$arg_consumed = false;
 					$this->options[] = array($opt, null);
 					if ($next_called) {

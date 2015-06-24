@@ -1,3 +1,4 @@
+#!/usr/bin/env php
 <?php
 define("EPGRDIR", "/var/www/localhost/htdocs/epgrec-una/");
 define("F_GROUP", "mediaprov");
