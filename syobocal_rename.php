@@ -112,7 +112,7 @@ EOT;
 				break;
 			case '-q':
 			case '--quiet':
-				$this->log_level = self::ERROR;
+				$this->log_level = self::ERR;
 				break;
 			default:
 				$this->_err("illegal option: %s", $opt[0]);
