@@ -197,12 +197,12 @@ EOT;
 		$new_path = $cfg['new_path'];
 		$pattern = array();
 		$pattern['%Season%'] = $this->search_season($found['TID']);
-		$pattern['%Title%'] = $found['Title'];
+		$pattern['%Title%'] = $this->escape_filename($found['Title']);
 		$pattern['%Channel%'] = $channel;
 		$pattern['%Date%'] = $matches['date'];
 		$pattern['%Extra%'] = isset($matches['extra']) ? $matches['extra'] : '';
 		$pattern['%Count%'] = $found['Count'];
-		$pattern['%SubTitle%'] = empty($found['SubTitle']) ? '' : $found['SubTitle'];
+		$pattern['%SubTitle%'] = empty($found['SubTitle']) ? '' : $this->escape_filename($found['SubTitle']);
 		$pattern['%ext%'] = $extension;
 		$new_path = strtr($new_path, $pattern);
 		if ($this->flag_no_action) {
@@ -213,6 +213,12 @@ EOT;
 				$this->epgrec_update_path($file_path, $new_path);
 			}
 		}
+	}
+
+	function escape_filename($str) {
+		$pattern = '/['.preg_quote(substr($this->cfg['safe_filename'], 1), '/').']/u';
+		$replacement = substr($this->cfg['safe_filename'], 0, 1);
+		return preg_replace($pattern, $replacement, $str);
 	}
 
 	function exec_fallback_prog($file_path) {
@@ -339,6 +345,7 @@ EOT;
 		if ($useOldMatch) {
 			$title = strtr($title, $this->cfg['replace']['pre']);
 		}
+		$title = preg_replace('/['.preg_quote($this->cfg['symbols'], '/').']/u', '', $title);
 		return Normalizer::normalize($title, Normalizer::FORM_KC);
 	}
 
@@ -346,6 +353,7 @@ EOT;
 		if (!$useOldMatch) {
 			$title = strtr($title, $this->cfg['replace']['newpre']);
 		}
+		$title = preg_replace('/['.preg_quote($this->cfg['symbols'], '/').']/u', '', $title);
 		return Normalizer::normalize($title, Normalizer::FORM_KC);
 	}
 

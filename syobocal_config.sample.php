@@ -55,6 +55,11 @@ $cfg['media_path'] = array(
 // falseのほうが一致度は上がりますが誤爆率もちょっと上がります。
 $cfg['title_cmp_traditional'] = false;
 
+// 記号。これらをタイトル比較前に削除する。
+$cfg['symbols'] = '/ _#★☆';
+
+// ファイル名に使用できない記号。これを指定した場合、すべて一文字目に置き換わる。
+$cfg['safe_filename'] = '_/';
 
 $cfg['replace'] = json_decode(file_get_contents($script_path . "/syobocal_replace.json"), true);
 date_default_timezone_set('Asia/Tokyo');
