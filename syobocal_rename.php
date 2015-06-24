@@ -18,7 +18,7 @@ Rename the specified PATHs
   -f, --fallback[=PROG]      fallback to exec external process
 			      if syobocal has no info for specified file
                              this option conflicts with --get-path
-                             PROG must be runnable file
+                             PROG must be runnable
 			      (default: \$APPDIR/update-filepath.php)
   -h, --help                 display this help and exit
   -i, --interactive          prompt the user whether to modify channel config
@@ -26,6 +26,8 @@ Rename the specified PATHs
   -n, --get-path             get renamed path in specified PATHs order
                              this conflicts with --fallback
   -q, --quiet                suppress stderr output but error
+			     -qq makes no stderr output
+                             but --fallback may output to stderr
 
 Configuration:
   \$APPDIR:
@@ -112,7 +114,7 @@ EOT;
 				break;
 			case '-q':
 			case '--quiet':
-				$this->log_level = self::ERR;
+				$this->log_level = $this->log_level<=self::ERR ? self::NONE : self::ERR;
 				break;
 			default:
 				$this->_err("illegal option: %s", $opt[0]);
