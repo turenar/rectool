@@ -15,8 +15,7 @@ $cfg['user'] = '<<UserID>>';
 //              syobocal_channel.jsonの更新には 'syobocal_rename.php --interactive' を使うと便利です。
 //   date:      日時。放送開始時間の絞り込みに使われるので結構重要です。
 //              $cfg['date_format'] によって更にパースされます
-//   title:     タイトル。先頭5文字が比較に使われます。TVアニメなど意味のない名前が入るときは
-//              syobocal_replace.json を編集してください。
+//   title:     タイトル。しょぼいカレンダーのタイトル先頭5文字と比較されます。
 //   extension: 拡張子。
 //
 // その他に
@@ -52,10 +51,11 @@ $cfg['media_path'] = array(
 	'/data/encoded/full' => $script_path.'/video/mp4'
 );
 
+// タイトルの比較にSyoboiRenamer/SCRenamerと同じ方式を使うかどうか。
+// falseのほうが一致度は上がりますが誤爆率もちょっと上がります。
+$cfg['title_cmp_traditional'] = false;
 
-{
+
 $cfg['replace'] = json_decode(file_get_contents($script_path . "/syobocal_replace.json"), true);
-}
-
 date_default_timezone_set('Asia/Tokyo');
 mb_internal_encoding('UTF-8');

@@ -185,8 +185,6 @@ EOT;
 		$title = $matches['title'];
 		$extension = $matches['extension'];
 
-		$title = strtr($title, $cfg['replace']['pre']);
-
 		$found = $this->search_program($start_date, $end_date, $channel, $title);
 
 		if ($found === null) {
@@ -224,8 +222,10 @@ EOT;
 	}
 
 	function search_program($start_date, $end_date, $channel, $title) {
-		$normTitle = mb_substr(Normalizer::normalize($title, Normalizer::FORM_KC), 0, 5);
+		$useOldMatch = $this->cfg['title_cmp_traditional'];
 		$channelmap = $this->cfg['channel'];
+
+		$normTitle = $this->normalize_file_title($useOldMatch, $title);
 
 		$stmt = $this->cache_db->prepare(
 			'SELECT subtitle AS SubTitle, channel AS ChName, title_tbl.title_id AS TID, title AS Title, season AS Season, count AS Count
@@ -241,8 +241,8 @@ EOT;
 			$found_without_channel = array();
 			do {
 				$progChId = isset($channelmap[$program['ChName']]) ? $channelmap[$program['ChName']] : null;
-				$progTitle = Normalizer::normalize($program['Title'], Normalizer::FORM_KC);
-				if (strpos($progTitle, $normTitle) !== false) {
+				$progTitle = $this->normalize_prog_title($useOldMatch, $program['Title']);
+				if ($this->compare_title($useOldMatch, $normTitle, $progTitle)) {
 					if($progChId == $channel){
 						return $program;
 					} else {
@@ -280,8 +280,8 @@ EOT;
 			$stmt->execute();
 
 			$progChId = isset($channelmap[$program['ChName']]) ? $channelmap[$program['ChName']] : null;
-			$progTitle = Normalizer::normalize($program['Title'], Normalizer::FORM_KC);
-			if (strpos($progTitle, $normTitle) !== false) {
+			$progTitle = $this->normalize_prog_title($useOldMatch, $program['Title']);
+			if ($this->compare_title($useOldMatch, $normTitle, $progTitle)) {
 				if($progChId == $channel){
 					$found = $program;
 				} else {
@@ -328,6 +328,25 @@ EOT;
 			}
 		}
 		return $found;
+	}
+
+	function compare_title($useOldMatch, $normTitle, $progTitle) {
+		return strpos($useOldMatch ? $progTitle : $normTitle,
+			mb_substr($useOldMatch ? $normTitle : $progTitle, 0, 5)) !== false;
+	}
+
+	function normalize_file_title($useOldMatch, $title) {
+		if ($useOldMatch) {
+			$title = strtr($title, $this->cfg['replace']['pre']);
+		}
+		return Normalizer::normalize($title, Normalizer::FORM_KC);
+	}
+
+	function normalize_prog_title($useOldMatch, $title) {
+		if (!$useOldMatch) {
+			$title = strtr($title, $this->cfg['replace']['newpre']);
+		}
+		return Normalizer::normalize($title, Normalizer::FORM_KC);
 	}
 
 	function add_channel($name, $channel) {
