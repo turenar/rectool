@@ -473,7 +473,7 @@ EOT;
 
 	function _log($level, $head, $format_args /*, ...*/) {
 		if ($this->log_level >= $level) {
-			$format = "%s: " . $format_args[0] . "\n";
+			$format = "[syobocal] %s: " . $format_args[0] . "\n";
 			$format_args[0] = $head;
 			vfprintf(STDERR, $format, $format_args);
 		}
