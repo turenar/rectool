@@ -298,7 +298,7 @@ EOT;
 
 		if ($found === null) {
 			if (count($found_without_channel) === 0) {
-				$this->_err("Specified program is not found. title=%s", $title);
+				$this->_err("Specified program is not found. title=%s", $normTitle);
 				return null;
 			} elseif ($this->flag_interactive) {
 				$this->_info("Specified named program seems to be found, but channel is not matched.");
@@ -342,19 +342,21 @@ EOT;
 	}
 
 	function normalize_file_title($useOldMatch, $title) {
+		$title = Normalizer::normalize($title, Normalizer::FORM_KC);
 		if ($useOldMatch) {
 			$title = strtr($title, $this->cfg['replace']['pre']);
 		}
 		$title = preg_replace('/['.preg_quote($this->cfg['symbols'], '/').']/u', '', $title);
-		return Normalizer::normalize($title, Normalizer::FORM_KC);
+		return $title;
 	}
 
 	function normalize_prog_title($useOldMatch, $title) {
+		$title = Normalizer::normalize($title, Normalizer::FORM_KC);
 		if (!$useOldMatch) {
 			$title = strtr($title, $this->cfg['replace']['newpre']);
 		}
 		$title = preg_replace('/['.preg_quote($this->cfg['symbols'], '/').']/u', '', $title);
-		return Normalizer::normalize($title, Normalizer::FORM_KC);
+		return $title;
 	}
 
 	function add_channel($name, $channel) {
