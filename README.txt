@@ -1,6 +1,7 @@
 Functions:
 	-queued encode with avconv
 	-auto commercials removal with comskip
+	-auto rename files
 
 	%% removed drop report function. You may get recomplete.php and
 	   check-drop.sh from https://github.com/turenar/epgrec
@@ -23,7 +24,7 @@ Install:
 
 Notice:
 	-for individual use.
-	
+
 	DO NOT PUBLISH ANY RECORDED FILE YOU DON'T HAVE COPYRIGHT!
 	DO NOT PUBLISH ANY RECORDED FILE YOU DON'T HAVE COPYRIGHT!
 	DO NOT PUBLISH ANY RECORDED FILE YOU DON'T HAVE COPYRIGHT!
