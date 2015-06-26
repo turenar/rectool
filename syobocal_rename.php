@@ -177,15 +177,10 @@ EOT;
 			$this->_err("Illegal date format: %s as %s", $matches['date'], $cfg['date_format']);
 			exit(ERR_FATAL_CONFIG);
 		}
-		$start_date = DateTime::createFromFormat($cfg['date_format'], $matches['date']);
-		//$start_date->modify('-15 min');
-		date_modify($start_date, '-15 min');
-		$end_date = DateTime::createFromFormat($cfg['date_format'], $matches['date']);
-		date_modify($end_date, '+75 min');
 		$title = $matches['title'];
 		$extension = $matches['extension'];
 
-		$found = $this->search_program($start_date, $end_date, $channel, $title);
+		$found = $this->search_program($date, $channel, $title);
 
 		if ($found === null) {
 			if ($this->flag_fallback_prog !== null) {
@@ -227,20 +222,19 @@ EOT;
 		$this->_info('  exit status: %d', $exit_status);
 	}
 
-	function search_program($start_date, $end_date, $channel, $title) {
+	function search_program($date, $channel, $title) {
 		$useOldMatch = $this->cfg['title_cmp_traditional'];
 		$channelmap = $this->cfg['channel'];
 
 		$normTitle = $this->normalize_file_title($useOldMatch, $title);
 
 		$stmt = $this->cache_db->prepare(
-			'SELECT subtitle AS SubTitle, channel AS ChName, title_tbl.title_id AS TID, title AS Title, season AS Season, count AS Count
+			'SELECT subtitle AS SubTitle, channel AS ChName, title_tbl.title_id AS TID, title AS Title,
+				season AS Season, count AS Count, start_date AS StTime, end_date AS EdTime
 			FROM program_tbl LEFT JOIN title_tbl ON title_tbl.title_id = program_tbl.title_id
-			WHERE start_date >= :start_date AND end_date <= :end_date');
-		$stTimestamp = $start_date->getTimestamp();
-		$edTimestamp = $end_date->getTimestamp();
-		$stmt->bindParam('start_date', $stTimestamp, SQLITE3_INTEGER);
-		$stmt->bindParam('end_date', $edTimestamp, SQLITE3_INTEGER);
+			WHERE start_date >= :date AND end_date <= :date');
+		$timestamp = $date->getTimestamp();
+		$stmt->bindParam('date', $timestamp, SQLITE3_INTEGER);
 		$result = $stmt->execute();
 		if ($program = $result->fetchArray(SQLITE3_ASSOC)) {
 			$found = null;
@@ -248,7 +242,8 @@ EOT;
 			do {
 				$progChId = isset($channelmap[$program['ChName']]) ? $channelmap[$program['ChName']] : null;
 				$progTitle = $this->normalize_prog_title($useOldMatch, $program['Title']);
-				if ($this->compare_title($useOldMatch, $normTitle, $progTitle)) {
+				if ($program['StTime'] < $timestamp && $timestamp < $program['EdTime']
+				  && $this->compare_title($useOldMatch, $normTitle, $progTitle)) {
 					if($progChId == $channel){
 						return $program;
 					} else {
@@ -259,11 +254,17 @@ EOT;
 		}
 
 		// cache miss
+		$this->_dbg(' program cache miss: %s', $title);
+		$start_date = clone $date;
+		//$start_date->modify('-15 min');
+		date_modify($start_date, '-15 min');
+		$end_date = clone $date;
+		date_modify($end_date, '+75 min');
+
 		$url = sprintf("http://cal.syoboi.jp/rss2.php?start=%s&end=%s&usr=%s&alt=json",
 			$start_date->format('YmdHi'), $end_date->format('YmdHi'), urlencode($this->cfg['user']));
 		$json = json_decode(file_get_contents($url), true);
 
-		$this->_dbg(' program cache miss: %s', $title);
 		$found = null;
 		$found_without_channel = array();
 		foreach ($json['items'] as $program) {
@@ -287,7 +288,8 @@ EOT;
 
 			$progChId = isset($channelmap[$program['ChName']]) ? $channelmap[$program['ChName']] : null;
 			$progTitle = $this->normalize_prog_title($useOldMatch, $program['Title']);
-			if ($this->compare_title($useOldMatch, $normTitle, $progTitle)) {
+			if ($program['StTime'] < $date->getTimestamp() && $date->getTimestamp() < $program['EdTime']
+			  && $this->compare_title($useOldMatch, $normTitle, $progTitle)) {
 				if($progChId == $channel){
 					$found = $program;
 				} else {
