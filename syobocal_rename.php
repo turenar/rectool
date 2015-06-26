@@ -339,8 +339,18 @@ EOT;
 	}
 
 	function compare_title($useOldMatch, $normTitle, $progTitle) {
-		return strpos($useOldMatch ? $progTitle : $normTitle,
-			mb_substr($useOldMatch ? $normTitle : $progTitle, 0, 5)) !== false;
+		if ($useOldMatch) {
+			return strpos($progTitle, mb_substr($normTitle, 0, 5)) !== false;
+		}
+		$len = mb_strlen($progTitle);
+		$tokmax = $len <= 5 ? 0 : $len-5;
+		for ($i=0; $i <= $tokmax; $i++) {
+			if (strpos($normTitle, mb_substr($progTitle, $i, 5)) !== false) {
+				$i==0 || $this->_dbg('Matched with offset: %d', $i);
+				return true;
+			}
+		}
+		return false;
 	}
 
 	function normalize_file_title($useOldMatch, $title) {
