@@ -19,7 +19,11 @@ renice -n 19 $$
 ionice -c 3 -p $$
 
 if true; then # avoid syntax error with editting
-test -z "${OUTPUT}" && OUTPUT="$1"
+test -z "$1" || OUTPUT="$1"
+if [ -z "$OUTPUT" ]; then
+	echo "specify file! abort."
+	exit 1
+fi
 
 EPGREC_D="$(dirname "$0")"
 BASEDIR="$(dirname "$(readlink -f "$0")")"
@@ -31,7 +35,6 @@ loglevel=${av_loglevel:-error}
 SSH_HOST=${enc_ssh:-localhost}
 CRFactor=${av_crf:-20}
 
-FNFULLPATH="$(readlink -f "${OUTPUT}")"
 FILENAME="$(basename "$OUTPUT")"
 FN_NOSUF="${FILENAME%.*}"
 
@@ -42,7 +45,7 @@ cd "$(dirname "$OUTPUT")"
 OUT_FULL="$(readlink -f "${OUTPUT}")"
 echo "OUT_FULL: $OUT_FULL"
 
-if [ ! -e "${FILENAME}" ]; then
+if [ ! -e "${OUT_FULL}" ]; then
 	echo "file is not found. abort."
 	exit ${NOT_FOUND_RETCODE}
 fi
@@ -94,7 +97,7 @@ if [ ! -v 'av_encskip' ]; then
 	av_encfile="${OUTPUT}"
 
 	# check source.ts
-	avconv -i "${OUTPUT}" > "${tempfile}/tsstat" 2>&1
+	#avconv -i "${OUTPUT}" > "${tempfile}/tsstat" 2>&1
 
 	video_map="-map v"
 	audio_map="-map a"
@@ -105,7 +108,7 @@ if [ ! -v 'av_encskip' ]; then
 	echo "avconv with full on ${SSH_HOST}"
 	remote_tmp=$(${SSH_CMD} mktemp)
 	remote_tmp=${remote_tmp:-${tempfile}/full.mp4}
-	dd if="${OUTPUT}" ibs=${BUFFER_SIZE} obs=${OUTBUF_SIZE} | \
+	dd if="${FILENAME}" ibs=${BUFFER_SIZE} obs=${OUTBUF_SIZE} | \
 		${THROTTLE_CMD} | \
 		${SSH_EXEC} avconv -i pipe: -loglevel ${loglevel} -y \
 		-f mp4 -pre:v hq -vcodec libx264 -acodec libfaac -vsync 1 \
@@ -174,7 +177,7 @@ fi
 if [ ! -e "${fullfile}" ]; then
 	echo "NOT FOUND ENCODED FILE!!!"
 	exit 16
-	#php "${EPGREC_D}/mediatomb-update.php" "${FNFULLPATH}" "${fullfile}"
+	#php "${EPGREC_D}/mediatomb-update.php" "${OUT_FULL}" "${fullfile}"
 fi
 
 cd "${TO}/full"
@@ -197,7 +200,7 @@ if [ ! -v 'av_encskip' -a -e "${FROM}/${FILENAME}" ]; then
 	cd "${FROM}"
 	ln "${FILENAME}" "${ARCHIVE}/${FILENAME}" || exit 1
 	#sleep 1
-	#php "${EPGREC_D}/mediatomb-update.php" "${FNFULLPATH}" "${ARCHIVE}/${FILENAME}"
+	#php "${EPGREC_D}/mediatomb-update.php" "${OUT_FULL}" "${ARCHIVE}/${FILENAME}"
 	rm "${FILENAME}"
 fi
 
