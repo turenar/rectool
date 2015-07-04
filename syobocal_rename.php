@@ -232,7 +232,7 @@ EOT;
 			'SELECT subtitle AS SubTitle, channel AS ChName, title_tbl.title_id AS TID, title AS Title,
 				season AS Season, count AS Count, start_date AS StTime, end_date AS EdTime
 			FROM program_tbl LEFT JOIN title_tbl ON title_tbl.title_id = program_tbl.title_id
-			WHERE start_date >= :date AND end_date <= :date');
+			WHERE start_date <= :date + 30 AND end_date > :date');
 		$timestamp = $date->getTimestamp();
 		$stmt->bindParam('date', $timestamp, SQLITE3_INTEGER);
 		$result = $stmt->execute();
@@ -242,8 +242,8 @@ EOT;
 			do {
 				$progChId = isset($channelmap[$program['ChName']]) ? $channelmap[$program['ChName']] : null;
 				$progTitle = $this->normalize_prog_title($useOldMatch, $program['Title']);
-				if ($program['StTime'] < $timestamp && $timestamp < $program['EdTime']
-				  && $this->compare_title($useOldMatch, $normTitle, $progTitle)) {
+				if (/*$program['StTime'] <= $timestamp && $timestamp < $program['EdTime']
+					&&*/ $this->compare_title($useOldMatch, $normTitle, $progTitle)) {
 					if($progChId == $channel){
 						return $program;
 					} else {
@@ -288,7 +288,7 @@ EOT;
 
 			$progChId = isset($channelmap[$program['ChName']]) ? $channelmap[$program['ChName']] : null;
 			$progTitle = $this->normalize_prog_title($useOldMatch, $program['Title']);
-			if ($program['StTime'] < $date->getTimestamp() && $date->getTimestamp() < $program['EdTime']
+			if ($program['StTime']-30 <= $date->getTimestamp() && $date->getTimestamp() < $program['EdTime']
 			  && $this->compare_title($useOldMatch, $normTitle, $progTitle)) {
 				if($progChId == $channel){
 					$found = $program;
