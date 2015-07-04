@@ -61,6 +61,12 @@ $cfg['symbols'] = '/ _#★☆';
 // ファイル名に使用できない記号。これを指定した場合、すべて一文字目に置き換わる。
 $cfg['safe_filename'] = '_/';
 
+// 比較する長さ。title_cmp_traditional が true の場合は5、
+// falseの場合は7くらいを推奨します。
+// 長くなれば長くなるほど誤爆率が下がりますがマッチ率も下がります。
+$cfg['match_length'] = 7;
+
+
 $cfg['replace'] = json_decode(file_get_contents($script_path . "/syobocal_replace.json"), true);
 date_default_timezone_set('Asia/Tokyo');
 mb_internal_encoding('UTF-8');

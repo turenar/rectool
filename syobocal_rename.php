@@ -339,13 +339,14 @@ EOT;
 	}
 
 	function compare_title($useOldMatch, $normTitle, $progTitle) {
+		$matchLength = $this->cfg['match_length'];
 		if ($useOldMatch) {
-			return strpos($progTitle, mb_substr($normTitle, 0, 5)) !== false;
+			return strpos($progTitle, mb_substr($normTitle, 0, $matchLength)) !== false;
 		}
 		$len = mb_strlen($progTitle);
-		$tokmax = $len <= 5 ? 0 : $len-5;
+		$tokmax = $len <= $matchLength ? 0 : $len-$matchLength;
 		for ($i=0; $i <= $tokmax; $i++) {
-			if (strpos($normTitle, mb_substr($progTitle, $i, 5)) !== false) {
+			if (strpos($normTitle, mb_substr($progTitle, $i, $matchLength)) !== false) {
 				$i==0 || $this->_dbg('Matched with offset: %d', $i);
 				return true;
 			}
