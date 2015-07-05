@@ -510,7 +510,7 @@ EOT;
 			link($src, $dst);
 		}else{
 			$this->_info("cross-dev");
-			copy($src, $dstfile);
+			copy($src, $dst);
 		}
 
 		if(!file_exists($dst)){
