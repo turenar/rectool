@@ -320,12 +320,12 @@ EOT;
 			$found = null;
 			$found_without_channel = array();
 			do {
-				$progChId = isset($channelmap[$program['ChName']]) ? $channelmap[$program['ChName']] : null;
+				$progChId = isset($channelmap[$program['ChName']]) ? $channelmap[$program['ChName']] : array();
 				$progTitle = $this->normalize_prog_title($useOldMatch, $program['Title']);
 				$progShortTitle = $this->normalize_prog_title($useOldMatch, $program['ShortTitle']);
 				if (/*$program['StTime'] <= $timestamp && $timestamp < $program['EdTime']
 					&&*/ $this->compare_title($useOldMatch, $normTitle, $progTitle, $progShortTitle)) {
-					if($progChId == $channel){
+					if(in_array($channel, $progChId, true)){
 						$found[] = $program;
 					} else {
 						$found_without_channel[] = $program;
@@ -383,12 +383,12 @@ EOT;
 			$stmt->bindParam('title', $program['Title']);
 			$stmt->execute();
 
-			$progChId = isset($channelmap[$program['ChName']]) ? $channelmap[$program['ChName']] : null;
+			$progChId = isset($channelmap[$program['ChName']]) ? $channelmap[$program['ChName']] : array();
 			$progTitle = $this->normalize_prog_title($useOldMatch, $program['Title']);
 			$progShortTitle = $this->normalize_prog_title($useOldMatch, $program['ShortTitle']);
 			if ($program['StTime']-30 <= $date->getTimestamp() && $date->getTimestamp() < $program['EdTime']
 			  && $this->compare_title($useOldMatch, $normTitle, $progTitle, $progShortTitle)) {
-				if($progChId == $channel){
+				if(in_array($channel, $progChId, true)){
 					$found[] = $program;
 				} else {
 					$found_without_channel[] = $program;
@@ -488,7 +488,10 @@ EOT;
 
 	function add_channel($name, $channel) {
 		global $script_path;
-		$this->cfg['channel'][$name] = $channel;
+		if (!isset($this->cfg['channel'][$name])) {
+			$this->cfg['channel'][$name] = array();
+		}
+		$this->cfg['channel'][$name][] = $channel;
 		file_put_contents($script_path . '/syobocal_channel.json', json_encode($this->cfg['channel'], JSON_PRETTY_PRINT|JSON_UNESCAPED_UNICODE));
 	}
 
