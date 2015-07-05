@@ -351,7 +351,7 @@ EOT;
 				return null;
 			} elseif ($this->flag_interactive) {
 				$this->_info("Specified named program seems to be found, but channel is not matched.");
-				$this->_info(" Target: '%s' (%s) %s", $title, $channel, $start_date->format('Y-m-d H:i:s'));
+				$this->_info(" Target: '%s' (%s) %s", $title, $channel, $date->format('Y-m-d H:i:s'));
 				foreach ($found_without_channel as $key => $program) {
 					$prog_start = strftime('%Y-%m-%d %H:%M:%S', $program['StTime']);
 					$prog_end   = strftime('%Y-%m-%d %H:%M:%S', $program['EdTime']);
