@@ -21,6 +21,10 @@ Rename the specified PATHs
                              this option conflicts with --get-path
                              PROG must be runnable
                               (default: \$APPDIR/update-filepath.php)
+      --fallback-type[=TYPE] set fallback type
+                             TYPE is 'each' or 'last'
+                              (if no arg passed with --fallback, default: last)
+                              (otherwise, default: each)
   -h, --help                 display this help and exit
   -i, --interactive          prompt the user whether to modify channel config
                              this can modify syobocal_channel.json
@@ -56,11 +60,14 @@ EOT;
 	private $flag_cache_only = false;
 	private $flag_epgrec = false;
 	private $flag_fallback_prog = null;
+	private $flag_fallback_type = null;
 	private $flag_interactive = false;
 	private $flag_loose = false;
 	private $flag_no_action = false;
 	private $epgrec_config = null;
 	private $epgrec_dbconn = null;
+
+	private $fallbacks = array();
 
 	function __construct($cfg){
 		global $script_path;
@@ -86,7 +93,7 @@ EOT;
 		}
 
 		$parser = new ArgParser('cdef::hilnq',
-			array('--cache-only', '--debug', '--epgrec', '--fallback::', '--help',
+			array('--cache-only', '--debug', '--epgrec', '--fallback::', '--fallback-type:', '--help',
 				'--interactive', '--loose', '--get-path', '--quiet'));
 		$parser->parse($argv);
 		$opterr = false;
@@ -109,8 +116,27 @@ EOT;
 			case '--fallback':
 				if ($opt[1] !== null) {
 					$this->flag_fallback_prog = $opt[1];
+					if ($this->flag_fallback_type === null) {
+						$this->flag_fallback_type = 'each';
+					}
 				} elseif ($this->flag_fallback_prog === null) {
 					$this->flag_fallback_prog = $script_path.'/update-filepath.php';
+				}
+				break;
+			case '--fallback-type':
+				switch ($opt[1]) {
+				case null:
+					$this->_err('specify option for --fallback-type');
+					$opterr = true;
+					break;
+				case 'each':
+				case 'last':
+					$this->flag_fallback_type = $opt[1];
+					break;
+				default:
+					$this->_err('unknown --fallback-type: %s', $opt[1]);
+					$opterr = true;
+					break;
 				}
 				break;
 			case '-h':
@@ -154,9 +180,17 @@ EOT;
 			$this->_err('options: --loose requires --epgrec');
 			$opterr = true;
 		}
+		if ($this->flag_fallback_type !== null && $this->flag_fallback_prog === null) {
+			$this->_err('options: --fallback-type requires --fallback');
+			$opterr = true;
+		}
 		if ($opterr) {
 			fprintf(STDERR, "see `%s --help'\n", $this->application_name);
 			exit(1);
+		}
+
+		if ($this->flag_fallback_prog !== null && $this->flag_fallback_type === null) {
+			$this->flag_fallback_type = 'last';
 		}
 
 		$this->_dbg("syobocal user: %s", $this->cfg['user']);
@@ -176,6 +210,10 @@ EOT;
 		foreach ($file_path as $elem) {
 			$this->_dbg("target: %s", $elem);
 			$this->process($elem);
+		}
+
+		if (count($this->fallbacks) > 0) {
+			$this->exec_fallback_prog($this->fallbacks);
 		}
 	}
 	function process($file_path) {
@@ -210,7 +248,11 @@ EOT;
 
 		if ($found === null) {
 			if ($this->flag_fallback_prog !== null) {
-				$this->exec_fallback_prog($file_path);
+				if ($this->flag_fallback_type === 'each') {
+					$this->exec_fallback_prog($file_path);
+				} else /* fallback_type === last */ {
+					$this->fallbacks[] = $file_path;
+				}
 			}
 			return false;
 		}
@@ -246,7 +288,16 @@ EOT;
 
 	function exec_fallback_prog($file_path) {
 		$this->_info(' fallbacking...');
-		passthru($this->flag_fallback_prog.' '.escapeshellarg($file_path), $exit_status);
+		$command = escapeshellcmd($this->flag_fallback_prog);
+		if (is_array($file_path)) {
+			foreach ($file_path as $path) {
+				$command.= ' '.escapeshellarg($path);
+			}
+		} else {
+			$command.= ' '.escapeshellarg($file_path);
+		}
+		$this->_dbg('  command=%s', $command);
+		passthru($command, $exit_status);
 		$this->_info('  exit status: %d', $exit_status);
 	}
 
