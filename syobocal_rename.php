@@ -675,7 +675,7 @@ class ArgParser {
 				$opt = substr($opt, 0, -1);
 				$argtype = ':';
 			}
-			$opts['--'.$opt] = $argtype;
+			$opts[$opt] = $argtype;
 		}
 		$this->opts = $opts;
 	}
@@ -690,9 +690,10 @@ class ArgParser {
 			$next_called = false;
 			$cur = current($argv);
 			if ($saved_arg !== null) {
+				// -??? style arguments (pass 2)
 				$opt = '-'.$saved_arg[0];
-				$arg = substr($saved_arg, 1);
-				$saved_arg = strlen($arg) === 0 ? null : $arg;
+				$arg = strlen($saved_arg) <= 1 ? null : substr($saved_arg, 1);
+				$saved_arg = $arg;
 			} elseif ($cur === '--') {
 				while(next($argv) !== false) {
 					$this->arguments[] = current($argv);
@@ -727,6 +728,7 @@ class ArgParser {
 			if (!isset($this->opts[$opt])) {
 				// unknown option
 				$this->options[] = array($opt, null);
+				next($argv);
 			} else {
 				$argtype = $this->opts[$opt];
 				if (($argtype === ':' && $arg !== false) || ($argtype === '::' && !$next_called)) {
