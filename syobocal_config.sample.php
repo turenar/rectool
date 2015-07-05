@@ -66,6 +66,9 @@ $cfg['safe_filename'] = '_/';
 // 長くなれば長くなるほど誤爆率が下がりますがマッチ率も下がります。
 $cfg['match_length'] = 7;
 
+// 略名も比較するかどうか。
+// title_cmp_traditional が true の場合のみ効果があります。
+$cfg['short_title_match'] = true;
 
 $cfg['replace'] = json_decode(file_get_contents($script_path . "/syobocal_replace.json"), true);
 date_default_timezone_set('Asia/Tokyo');

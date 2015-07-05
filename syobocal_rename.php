@@ -236,7 +236,7 @@ EOT;
 
 		$stmt = $this->cache_db->prepare(
 			'SELECT subtitle AS SubTitle, channel AS ChName, title_tbl.title_id AS TID, title AS Title,
-				season AS Season, count AS Count, start_date AS StTime, end_date AS EdTime
+				season AS Season, count AS Count, start_date AS StTime, end_date AS EdTime, short_title AS ShortTitle
 			FROM program_tbl LEFT JOIN title_tbl ON title_tbl.title_id = program_tbl.title_id
 			WHERE start_date <= :date + 30 AND end_date > :date');
 		$timestamp = $date->getTimestamp();
@@ -249,8 +249,9 @@ EOT;
 			do {
 				$progChId = isset($channelmap[$program['ChName']]) ? $channelmap[$program['ChName']] : null;
 				$progTitle = $this->normalize_prog_title($useOldMatch, $program['Title']);
+				$progShortTitle = $this->normalize_prog_title($useOldMatch, $program['ShortTitle']);
 				if (/*$program['StTime'] <= $timestamp && $timestamp < $program['EdTime']
-					&&*/ $this->compare_title($useOldMatch, $normTitle, $progTitle)) {
+					&&*/ $this->compare_title($useOldMatch, $normTitle, $progTitle, $progShortTitle)) {
 					if($progChId == $channel){
 						$found[] = $program;
 					} else {
@@ -290,8 +291,8 @@ EOT;
 		$found_without_channel = array();
 		foreach ($json['items'] as $program) {
 			$stmt = $this->cache_db->prepare('INSERT OR REPLACE
-				INTO program_tbl(program_id, start_date, end_date, title_id, channel, subtitle, count)
-				VALUES (:program_id, :start_date, :end_date, :title_id, :channel, :subtitle, :count)');
+				INTO program_tbl(program_id, start_date, end_date, title_id, channel, subtitle, count, short_title)
+				VALUES (:program_id, :start_date, :end_date, :title_id, :channel, :subtitle, :count, :short_title)');
 			$stmt->bindParam('program_id', $program['PID']);
 			$stmt->bindParam('start_date', $program['StTime']);
 			$stmt->bindParam('end_date', $program['EdTime']);
@@ -299,6 +300,8 @@ EOT;
 			$stmt->bindParam('channel', $program['ChName']);
 			$stmt->bindParam('subtitle', $program['SubTitle']);
 			$stmt->bindParam('count', $program['Count']);
+			$paramShortTitle = empty($program['ShortTitle']) ? null : $program['ShortTitle'];
+			$stmt->bindParam('short_title', $paramShortTitle);
 			$stmt->execute();
 			$stmt = $this->cache_db->prepare('INSERT OR REPLACE
 				INTO title_tbl(title_id, title, season)
@@ -309,8 +312,9 @@ EOT;
 
 			$progChId = isset($channelmap[$program['ChName']]) ? $channelmap[$program['ChName']] : null;
 			$progTitle = $this->normalize_prog_title($useOldMatch, $program['Title']);
+			$progShortTitle = $this->normalize_prog_title($useOldMatch, $program['ShortTitle']);
 			if ($program['StTime']-30 <= $date->getTimestamp() && $date->getTimestamp() < $program['EdTime']
-			  && $this->compare_title($useOldMatch, $normTitle, $progTitle)) {
+			  && $this->compare_title($useOldMatch, $normTitle, $progTitle, $progShortTitle)) {
 				if($progChId == $channel){
 					$found[] = $program;
 				} else {
@@ -341,7 +345,7 @@ EOT;
 					} elseif (isset($found_without_channel[$answer])) {
 						$program = $found_without_channel[$answer];
 						$this->add_channel($program['ChName'], $channel);
-						return $this->search_program($start_date, $end_date, $channel, $title);
+						return $this->search_program($date, $channel, $title);
 					} else {
 						$this->_warn('unknown operation');
 					}
@@ -364,10 +368,18 @@ EOT;
 		return $found[0];
 	}
 
-	function compare_title($useOldMatch, $normTitle, $progTitle) {
+	function compare_title($useOldMatch, $normTitle, $progTitle, $shortTitle) {
 		$matchLength = $this->cfg['match_length'];
 		if ($useOldMatch) {
 			return strpos($progTitle, mb_substr($normTitle, 0, $matchLength)) !== false;
+		}
+		return $this->compare_title_internal($matchLength, $normTitle, $progTitle)
+			|| $this->compare_title_internal($matchLength, $normTitle, $shortTitle);
+	}
+
+	function compare_title_internal($matchLength, $normTitle, $progTitle) {
+		if (empty($progTitle)) { // probably short name
+			return false;
 		}
 		$len = mb_strlen($progTitle);
 		$tokmax = $len <= $matchLength ? 0 : $len-$matchLength;
@@ -390,6 +402,9 @@ EOT;
 	}
 
 	function normalize_prog_title($useOldMatch, $title) {
+		if (empty($title)) {
+			return null;
+		}
 		$title = Normalizer::normalize($title, Normalizer::FORM_KC);
 		if (!$useOldMatch) {
 			$title = strtr($title, $this->cfg['replace']['newpre']);
@@ -587,16 +602,23 @@ EOT;
 				$this->_dbg('dbver is found: %d', $dbver);
 			}
 		}
-
-		if ($dbver <= 0) {
+		$result->finalize();
+		switch ($dbver) {
+		case 0:
 			$this->_dbg('Creating cache database...');
-			$this->_sqlite_query('CREATE TABLE config_tbl(key TEXT, value INT)');
+			$this->_sqlite_query('CREATE TABLE config_tbl(key TEXT PRIMARY KEY, value INT)');
 			$this->_sqlite_query('CREATE TABLE program_tbl (
 				program_id INT PRIMARY KEY, start_date INT, end_date INT, title_id INT, channel TEXT,
 				subtitle TEXT, count INT)');
 			$this->_sqlite_query('CREATE INDEX prog_date_idx ON program_tbl(start_date)');
 			$this->_sqlite_query('CREATE TABLE title_tbl (title_id INT PRIMARY KEY, title TEXT, season TEXT)');
 			$this->_sqlite_query("INSERT OR REPLACE INTO config_tbl (key, value) VALUES ('dbver', 1)");
+		case 1:
+			$this->_dbg('Updating database format (1->2)...');
+			$this->_sqlite_query('ALTER TABLE program_tbl ADD short_title TEXT');
+			$this->_sqlite_query('DROP INDEX prog_date_idx');
+			$this->_sqlite_query('CREATE INDEX prog_date_idx ON program_tbl(start_date, end_date)');
+			$this->_sqlite_query("INSERT OR REPLACE INTO config_tbl (key, value) VALUES ('dbver', 2)");
 		}
 	}
 
