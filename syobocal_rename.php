@@ -311,7 +311,7 @@ EOT;
 			'SELECT subtitle AS SubTitle, channel AS ChName, title_tbl.title_id AS TID, title AS Title,
 				season AS Season, count AS Count, start_date AS StTime, end_date AS EdTime, short_title AS ShortTitle
 			FROM program_tbl LEFT JOIN title_tbl ON title_tbl.title_id = program_tbl.title_id
-			WHERE start_date <= :date + 30 AND end_date > :date');
+			WHERE start_date BETWEEN :date - 60*60*4 AND :date + 30 AND end_date > :date');
 		$timestamp = $date->getTimestamp();
 		$stmt->bindParam('date', $timestamp, SQLITE3_INTEGER);
 		$result = $stmt->execute();
