@@ -181,19 +181,18 @@ if [ ! -e "${fullfile}" ]; then
 fi
 
 cd "${TO}/full"
-php "${EPGREC_D}/update-filepath.php" "${FN_NOSUF}.mp4"
-php "${EPGREC_D}/update-filepath.php" "nocm-${FN_NOSUF}.mp4"
+php "${EPGREC_D}/syobocal_rename.php" -efl "${FN_NOSUF}.mp4" "nocm-${FN_NOSUF}.mp4"
 
-if [ -z "${TRANS}" ]; then
-	: #ignore
-elif [ -e "${FN_NOSUF}.mp4" ]; then
-	php "${EPGREC_D}/epgrec-update.php" "${TRANS}" "$(pwd)/${FN_NOSUF}.mp4"
-	#[ -e "${EPGREC_D}/thumbs/${FILENAME}.jpg" ] && mv "${EPGREC_D}/thumbs/${FILENAME}.jpg" "${EPGREC_D}/thumbs/${FN_NOSUF}.mp4.jpg"
-elif [ -e */"${FN_NOSUF}.mp4" ]; then
-	_filename=*/"${FN_NOSUF}.mp4"
-	php "${EPGREC_D}/epgrec-update.php" "${TRANS}" "$(pwd)/${_filename}"
-	#[ -e "${EPGREC_D}/thumbs/${FILENAME}.jpg" ] && mv "${EPGREC_D}/thumbs/${FILENAME}.jpg" "${EPGREC_D}/thumbs/${FN_NOSUF}.mp4.jpg"
-fi
+#if [ -z "${TRANS}" ]; then
+#	: #ignore
+#elif [ -e "${FN_NOSUF}.mp4" ]; then
+#	#php "${EPGREC_D}/epgrec-update.php" "${TRANS}" "$(pwd)/${FN_NOSUF}.mp4"
+#	#[ -e "${EPGREC_D}/thumbs/${FILENAME}.jpg" ] && mv "${EPGREC_D}/thumbs/${FILENAME}.jpg" "${EPGREC_D}/thumbs/${FN_NOSUF}.mp4.jpg"
+#elif [ -e */"${FN_NOSUF}.mp4" ]; then
+#	#_filename=*/"${FN_NOSUF}.mp4"
+#	#php "${EPGREC_D}/epgrec-update.php" "${TRANS}" "$(pwd)/${_filename}"
+#	#[ -e "${EPGREC_D}/thumbs/${FILENAME}.jpg" ] && mv "${EPGREC_D}/thumbs/${FILENAME}.jpg" "${EPGREC_D}/thumbs/${FN_NOSUF}.mp4.jpg"
+#fi
 
 if [ ! -v 'av_encskip' -a -e "${FROM}/${FILENAME}" ]; then
 	echo 'Moving file into archives'
