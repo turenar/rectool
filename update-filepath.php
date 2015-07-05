@@ -78,7 +78,7 @@ function init_tsv(){
 			continue;
 		}
 		list($season, $name, $regex) = explode("\t", $line);
-		$tsv_data[$regex] = "$season/{$season}_$name";
+		$tsv_data[$regex] = "$season/$name";
 	}
 	fclose($fp);
 }
