@@ -89,6 +89,7 @@ EOT;
 			array('--cache-only', '--debug', '--epgrec', '--fallback::', '--help',
 				'--interactive', '--loose', '--get-path', '--quiet'));
 		$parser->parse($argv);
+		$opterr = false;
 		$options = $parser->getopts();
 		foreach ($options as $opt) {
 			switch ($opt[0]) {
@@ -134,24 +135,28 @@ EOT;
 				break;
 			default:
 				$this->_err("illegal option: %s", $opt[0]);
+				$opterr = true;
 			}
 		}
 
 		$file_path = $parser->getargs();
 
 		if (count($file_path) === 0) {
-			$this->_err("missing argument");
-			fprintf(STDERR, "see `%s --help'\n", $this->application_name);
-			exit(ERR_FATAL);
+			$this->_err("missing file argument(s)");
+			$opterr = true;
 		}
 
 		if ($this->flag_no_action && $this->flag_fallback_prog !== null) {
 			$this->_err('options: --get-path and --fallback are incompatible');
-			exit(ERR_FATAL);
+			$opterr = true;
 		}
 		if ($this->flag_loose && !$this->flag_epgrec) {
 			$this->_err('options: --loose requires --epgrec');
-			exit(ERR_FATAL);
+			$opterr = true;
+		}
+		if ($opterr) {
+			fprintf(STDERR, "see `%s --help'\n", $this->application_name);
+			exit(1);
 		}
 
 		$this->_dbg("syobocal user: %s", $this->cfg['user']);
