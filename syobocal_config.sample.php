@@ -35,6 +35,7 @@ $cfg['path_regex'] = "/^(?P<extra>(?:nocm-)?)(?P<channel>.+)_(?P<date>\\d+)_(?P<
 // %Count%:      何話目か
 // %SubTitle%:   サブタイトル (あれば)
 // %ShortTitle%: 短いタイトル。無ければ普通のタイトルと同等。
+// %OrigName%:   元々のファイル名
 // %ext%:        拡張子
 $cfg['new_path'] = "%Season%/%Title%/%Extra%%Channel%_%Date%_%ShortTitle%_#%Count%_%SubTitle%.%ext%";
 
