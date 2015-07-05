@@ -11,6 +11,7 @@ class SyobocalRenamer {
 Usage: {$this->application_name} [OPTION]... [PATH]...
 Rename the specified PATHs
 
+  -c, --cache-only           use only cached data: do not retrieve network data
   -d, --debug                output more noisy information for debugger
   -e, --epgrec               enable epgrec path update feature
                              this requires epgrec's config.php is existing
@@ -49,6 +50,7 @@ EOT;
 	private $log_level = self::INFO;
 	private $cache_db;
 
+	private $flag_cache_only = false;
 	private $flag_epgrec = false;
 	private $flag_fallback_prog = null;
 	private $flag_interactive = false;
@@ -79,12 +81,16 @@ EOT;
 			exit(ERR_FATAL_CONFIG);
 		}
 
-		$parser = new ArgParser('def::hinq',
-			array('--debug', '--epgrec', '--fallback::', '--help', '--interactive', '--get-path', '--quiet'));
+		$parser = new ArgParser('cdef::hinq',
+			array('--cache-only', '--debug', '--epgrec', '--fallback::', '--help', '--interactive', '--get-path', '--quiet'));
 		$parser->parse($argv);
 		$options = $parser->getopts();
 		foreach ($options as $opt) {
 			switch ($opt[0]) {
+			case '-c':
+			case '--cache-only':
+				$this->flag_cache_only = true;
+				break;
 			case '-d':
 			case '--debug':
 				$this->log_level = self::DEBUG;
@@ -236,6 +242,7 @@ EOT;
 		$timestamp = $date->getTimestamp();
 		$stmt->bindParam('date', $timestamp, SQLITE3_INTEGER);
 		$result = $stmt->execute();
+		$found = array();
 		if ($program = $result->fetchArray(SQLITE3_ASSOC)) {
 			$found = null;
 			$found_without_channel = array();
@@ -245,7 +252,7 @@ EOT;
 				if (/*$program['StTime'] <= $timestamp && $timestamp < $program['EdTime']
 					&&*/ $this->compare_title($useOldMatch, $normTitle, $progTitle)) {
 					if($progChId == $channel){
-						return $program;
+						$found[] = $program;
 					} else {
 						$found_without_channel[] = $program;
 					}
@@ -253,7 +260,21 @@ EOT;
 			} while ($program = $result->fetchArray(SQLITE3_ASSOC));
 		}
 
+		if (count($found) >= 1) {
+			if (count($found) > 1) {
+				$this->_info(" multiple matched: %s", $title);
+				foreach ($found as $prog) {
+					$this->_dbg('  progTitle=%s, progChannel=%s', $prog['Title'], $prog['ChName']);
+				}
+			}
+			return $found[0];
+		}
+
 		// cache miss
+		if ($this->flag_cache_only) {
+			$this->_err("Specified program is not found. title=%s", $normTitle);
+			return null;
+		}
 		$this->_dbg(' program cache miss: %s', $title);
 		$start_date = clone $date;
 		//$start_date->modify('-15 min');
@@ -265,7 +286,7 @@ EOT;
 			$start_date->format('YmdHi'), $end_date->format('YmdHi'), urlencode($this->cfg['user']));
 		$json = json_decode(file_get_contents($url), true);
 
-		$found = null;
+		$found = array();
 		$found_without_channel = array();
 		foreach ($json['items'] as $program) {
 			$stmt = $this->cache_db->prepare('INSERT OR REPLACE
@@ -291,14 +312,14 @@ EOT;
 			if ($program['StTime']-30 <= $date->getTimestamp() && $date->getTimestamp() < $program['EdTime']
 			  && $this->compare_title($useOldMatch, $normTitle, $progTitle)) {
 				if($progChId == $channel){
-					$found = $program;
+					$found[] = $program;
 				} else {
 					$found_without_channel[] = $program;
 				}
 			}
 		}
 
-		if ($found === null) {
+		if (count($found) === 0) {
 			if (count($found_without_channel) === 0) {
 				$this->_err("Specified program is not found. title=%s", $normTitle);
 				return null;
@@ -334,8 +355,13 @@ EOT;
 				$this->_err("Check your syobocal_channel.json");
 				return null;
 			}
+		} elseif (count($found) > 1) {
+			$this->_info(" multiple matched: %s", $title);
+			foreach ($found as $prog) {
+				$this->_dbg('  progTitle=%s, progChannel=%s', $prog['Title'], $prog['ChName']);
+			}
 		}
-		return $found;
+		return $found[0];
 	}
 
 	function compare_title($useOldMatch, $normTitle, $progTitle) {
@@ -391,6 +417,10 @@ EOT;
 			$found_row = false;
 		}
 
+		if ($this->flag_cache_only) {
+			$this->_info(' season data is not cached');
+			return 'unknown';
+		}
 		$this->_dbg(' title cache miss: %d', $title_id);
 		$url = "http://cal.syoboi.jp/db.php?Command=TitleLookup&TID=$title_id";
 
