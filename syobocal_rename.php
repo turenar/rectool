@@ -21,7 +21,7 @@ Rename the specified PATHs
                              this option conflicts with --get-path
                              PROG must be runnable
                               (default: \$APPDIR/update-filepath.php)
-      --fallback-type[=TYPE] set fallback type
+      --fallback-type=TYPE   set fallback type
                              TYPE is 'each' or 'last'
                               (if no arg passed with --fallback, default: last)
                               (otherwise, default: each)
