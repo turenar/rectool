@@ -15,19 +15,22 @@ Rename the specified PATHs
   -d, --debug                output more noisy information for debugger
   -e, --epgrec               enable epgrec path update feature
                              this requires epgrec's config.php is existing
-		              in application dir
+                              in application dir
   -f, --fallback[=PROG]      fallback to exec external process
-			      if syobocal has no info for specified file
+                              if syobocal has no info for specified file
                              this option conflicts with --get-path
                              PROG must be runnable
-			      (default: \$APPDIR/update-filepath.php)
+                              (default: \$APPDIR/update-filepath.php)
   -h, --help                 display this help and exit
   -i, --interactive          prompt the user whether to modify channel config
                              this can modify syobocal_channel.json
+  -l, --loose                in epgrec mode, match only older name
+                              instead of full path
+                             this increases mysql query loads
   -n, --get-path             get renamed path in specified PATHs order
                              this conflicts with --fallback
   -q, --quiet                suppress stderr output but error
-			     -qq makes no stderr output
+                             -qq makes no stderr output
                              but --fallback may output to stderr
 
 Configuration:
@@ -54,6 +57,7 @@ EOT;
 	private $flag_epgrec = false;
 	private $flag_fallback_prog = null;
 	private $flag_interactive = false;
+	private $flag_loose = false;
 	private $flag_no_action = false;
 	private $epgrec_config = null;
 	private $epgrec_dbconn = null;
@@ -81,8 +85,9 @@ EOT;
 			exit(ERR_FATAL_CONFIG);
 		}
 
-		$parser = new ArgParser('cdef::hinq',
-			array('--cache-only', '--debug', '--epgrec', '--fallback::', '--help', '--interactive', '--get-path', '--quiet'));
+		$parser = new ArgParser('cdef::hilnq',
+			array('--cache-only', '--debug', '--epgrec', '--fallback::', '--help',
+				'--interactive', '--loose', '--get-path', '--quiet'));
 		$parser->parse($argv);
 		$options = $parser->getopts();
 		foreach ($options as $opt) {
@@ -114,6 +119,11 @@ EOT;
 			case '-i':
 			case '--interactive':
 				$this->flag_interactive = true;
+				break;
+			case '-l':
+			case '--loose':
+				$this->flag_loose = true;
+				break;
 			case '-n':
 			case '--get-path':
 				$this->flag_no_action = true;
@@ -137,6 +147,11 @@ EOT;
 
 		if ($this->flag_no_action && $this->flag_fallback_prog !== null) {
 			$this->_err('options: --get-path and --fallback are incompatible');
+			exit(ERR_FATAL);
+		}
+		if ($this->flag_loose && !$this->flag_epgrec) {
+			$this->_err('options: --loose requires --epgrec');
+			exit(ERR_FATAL);
 		}
 
 		$this->_dbg("syobocal user: %s", $this->cfg['user']);
@@ -535,6 +550,7 @@ EOT;
 				$this->_err("failed to connect with mysql: (%d)%s", $conn->connect_errno, $conn->connect_error);
 				exit(ERR_FATAL);
 			}
+			$conn->set_charset('utf-8');
 			$this->epgrec_dbconn = $conn;
 		}
 		$conn = $this->epgrec_dbconn;
@@ -544,14 +560,16 @@ EOT;
 		$old = strtr(realpath(dirname($old)).'/'.basename($old), $media_paths);
 		$new = strtr(realpath($new), $media_paths);
 
-		if($stmt = $conn->prepare(sprintf('UPDATE `%s` SET `path` = ? WHERE `path` = ?', $setting->tbl_prefix.TRANSCODE_TBL))){
-			$stmt->bind_param('ss', $new, $old);
+		$sql = sprintf('UPDATE `%s` SET `path` = ? WHERE `path` %s ?', $setting->tbl_prefix.TRANSCODE_TBL, $this->flag_loose ? 'LIKE' : '=');
+		if($stmt = $conn->prepare($sql)){
+			$file_pattern = $this->flag_loose ? '%/'.basename($old) : $old;
+			$stmt->bind_param('ss', $new, $file_pattern);
 			$stmt->execute();
 			if ($stmt->affected_rows === -1) {
 				$this->_err(" query error: (%d)%s", $stmt->errno, $stmt->error);
 				exit(ERR_FATAL);
 			} elseif ($stmt->affected_rows === 0) {
-				$this->_warn(" specified path entry is not found (%s)", $old);
+				$this->_warn(" specified path entry is not found or updated (%s)", $file_pattern);
 				return false;
 			}
 			return true;
