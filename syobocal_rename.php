@@ -204,6 +204,7 @@ EOT;
 		$pattern['%Extra%'] = isset($matches['extra']) ? $matches['extra'] : '';
 		$pattern['%Count%'] = $found['Count'];
 		$pattern['%SubTitle%'] = empty($found['SubTitle']) ? '' : $this->escape_filename($found['SubTitle']);
+		$pattern['%ShortTitle%'] = $this->escape_filename(empty($found['ShortTitle']) ? $found['Title'] : $found['ShortTitle']);
 		$pattern['%ext%'] = $extension;
 		$new_path = strtr($new_path, $pattern);
 		if ($this->flag_no_action) {

@@ -23,24 +23,25 @@ $cfg['user'] = '<<UserID>>';
 //
 // Chinachuデフォルトなら /^\\[(?P<date>\\d{6}-\\d{4})\\]\\[(?P<channel>[^\\]]+)\\]\\[.+\\](?P<title>.+).(?P<extension>m2ts)$/
 // になるのかな？date_formatの更新も忘れずに
-$cfg['path_regex'] = "/^(?P<extra>(?:nocm-)?)(?P<channel>.+)_(?P<date>\\d+)\\d{2}_(?P<title>.+)\\.(?P<extension>[^\\.]+)$/";
+$cfg['path_regex'] = "/^(?P<extra>(?:nocm-)?)(?P<channel>.+)_(?P<date>\\d+)_(?P<title>.+)\\.(?P<extension>[^\\.]+)$/";
 
 // リネーム後のパス。相対パスなら syobocal_rename.php を走らせた作業ディレクトリ内に保管します。
 // 絶対パスなら言わずもがな。
-// %Season%:    放送された季節 ("年度"Y"四半期"Q)
-// %Title%:     しょぼいカレンダーによるタイトル
-// %Extra%:     上の(?P<extra>REGEX)で取得した内容
-// %Channel%:   もとのファイル名にあったチャンネル
-// %Date%:      もとのファイル名にあった日時
-// %Count%:     何話目か
-// %SubTitle%:  サブタイトル (あれば)
-// %ext%:       拡張子
-$cfg['new_path'] = "%Season%/%Title%/%Extra%%Channel%_%Date%00_%Title%_#%Count%_%SubTitle%.%ext%";
+// %Season%:     放送された季節 ("年度"Y"四半期"Q)
+// %Title%:      しょぼいカレンダーによるタイトル
+// %Extra%:      上の(?P<extra>REGEX)で取得した内容
+// %Channel%:    もとのファイル名にあったチャンネル
+// %Date%:       もとのファイル名にあった日時
+// %Count%:      何話目か
+// %SubTitle%:   サブタイトル (あれば)
+// %ShortTitle%: 短いタイトル。無ければ普通のタイトルと同等。
+// %ext%:        拡張子
+$cfg['new_path'] = "%Season%/%Title%/%Extra%%Channel%_%Date%_%ShortTitle%_#%Count%_%SubTitle%.%ext%";
 
 // ファイル名の日時の形式。
 // 参照: http://php.net/manual/ja/datetime.createfromformat.php#refsect1-datetime.createfromformat-parameters
 // Chinachuデフォルトならおそらくymd-Hi
-$cfg['date_format'] = "YmdHi";
+$cfg['date_format'] = "YmdHis";
 
 // ファイルのグループ名指定。リネーム後にこのグループに所属させます。
 $cfg['file_group'] = "mediaprov";
