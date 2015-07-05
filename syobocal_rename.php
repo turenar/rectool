@@ -22,10 +22,9 @@ Rename the specified PATHs
                              PROG must be runnable
                               (default: \$APPDIR/update-filepath.php)
       --fallback-type=TYPE   set fallback type
-                             TYPE is 'each' or 'last'
+                             TYPE is either of 'each' or 'last'
                               (if no arg passed with --fallback, default: last)
                               (otherwise, default: each)
-  -h, --help                 display this help and exit
   -i, --interactive          prompt the user whether to modify channel config
                              this can modify syobocal_channel.json
   -l, --loose                in epgrec mode, match only older name
@@ -36,6 +35,9 @@ Rename the specified PATHs
   -q, --quiet                suppress stderr output but error
                              -qq makes no stderr output
                              but --fallback may output to stderr
+
+  -h, --help                 display this help and exit
+  -v, --version              display version information and exit
 
 Configuration:
   \$APPDIR:
@@ -168,6 +170,10 @@ EOT;
 			case '--quiet':
 				$this->log_level = $this->log_level<=self::ERR ? self::NONE : self::ERR;
 				break;
+			case '-v':
+			case '--version':
+				$this->show_version();
+				exit(0);
 			default:
 				$this->_err("illegal option: %s", $opt[0]);
 				$opterr = true;
@@ -714,6 +720,15 @@ EOT;
 		if (!$this->cache_db->exec($sql)) {
 			$this->_err("Failed sql (%d:%s) %s", $this->cache_db->lastErrorCode(), $this->cache_db->lastErrorMsg(), $sql);
 		}
+	}
+
+	function show_version() {
+		global $script_path;
+		chdir($script_path);
+		echo 'Syobocal Renamer (';
+		echo basename($this->application_name);
+		echo ') rev:';
+		passthru('git rev-parse --short HEAD');
 	}
 }
 
