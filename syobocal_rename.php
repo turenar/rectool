@@ -56,6 +56,7 @@ EOT;
 	private $cfg;
 	private $log_level = self::INFO;
 	private $cache_db;
+	private $stream_contexts;
 
 	private $flag_cache_only = false;
 	private $flag_epgrec = false;
@@ -81,6 +82,14 @@ EOT;
 		}
 
 		$this->cache_db = new SQLite3($script_path . '/syobocal_cache.db');
+
+		$stream_options = array(
+			 'http' => array(
+				'method' => 'GET',
+				'header' => 'User-Agent: SyobocalRenamer/0 (https://github.com/turenar/rectool/blob/master/syobocal_rename.php)',
+			),
+		);
+		$this->stream_context = stream_context_create($stream_options);
 	}
 
 	function run($argv){
@@ -358,7 +367,7 @@ EOT;
 
 		$url = sprintf("http://cal.syoboi.jp/rss2.php?start=%s&end=%s&usr=%s&alt=json",
 			$start_date->format('YmdHi'), $end_date->format('YmdHi'), urlencode($this->cfg['user']));
-		$json = json_decode(file_get_contents($url), true);
+		$json = json_decode(file_get_contents($url, false, $this->stream_context), true);
 
 		$found = array();
 		$found_without_channel = array();
@@ -515,7 +524,7 @@ EOT;
 		$this->_dbg(' title cache miss: %d', $title_id);
 		$url = "http://cal.syoboi.jp/db.php?Command=TitleLookup&TID=$title_id";
 
-		$title_data = simplexml_load_string(file_get_contents($url));
+		$title_data = simplexml_load_string(file_get_contents($url, false, $this->stream_context));
 		$title_data = $title_data->TitleItems->TitleItem;
 
 		if (empty($title_data->FirstYear) || empty($title_data->FirstMonth)) {
