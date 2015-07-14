@@ -72,6 +72,18 @@ $cfg['match_length'] = 7;
 // title_cmp_traditional が true の場合のみ効果があります。
 $cfg['short_title_match'] = true;
 
+// 作成するディレクトリのパーミッション
+// 0775 = ディレクトリが所属するグループまで書き込み可
+// 0755 = ディレクトリが所属するユーザーのみ書き込み可
+$cfg['dir_perm'] = 0775;
+
+// このプログラムが使用するumaskの値。
+// 0002 = dir_perm==0775 の場合の推奨値。
+// 0022 = dir_perm==0755 の場合の推奨値。
+$umask = 0002;
+
+// ここから下は特にいじる必要なし。
 $cfg['replace'] = json_decode(file_get_contents($script_path . "/syobocal_replace.json"), true);
 date_default_timezone_set('Asia/Tokyo');
 mb_internal_encoding('UTF-8');
+umask($umask);

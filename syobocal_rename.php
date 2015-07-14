@@ -557,8 +557,7 @@ EOT;
 			return false;
 		}
 		if(!is_dir($dstdir)) {
-			mkdir($dstdir, 0775, true);
-			chgrp($dstdir, $this->cfg['file_group']);
+			$this->mkdir_p($dstdir);
 		}
 
 		if(realpath($src)!==FALSE && realpath($src) === realpath($dst)){
@@ -602,6 +601,16 @@ EOT;
 		unlink($src);
 		return true;
 	}
+
+	function mkdir_p($dir) {
+		$parent = dirname($dir);
+		if (!is_dir($parent)) {
+			$this->mkdir_p($parent);
+		}
+		mkdir($dir, $this->cfg['dir_perm']);
+		chgrp($dir, $this->cfg['file_group']);
+	}
+
 
 	static function get_season($year, $month) {
 		$year = intval($year);
