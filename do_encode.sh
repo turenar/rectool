@@ -181,7 +181,7 @@ if [ ! -e "${fullfile}" ]; then
 fi
 
 cd "${TO}/full"
-php "${EPGREC_D}/syobocal_rename.php" -efl "${FN_NOSUF}.mp4" "nocm-${FN_NOSUF}.mp4"
+php "${EPGREC_D}/syobocal_rename.php" -elf "${fullfile}" "${nocmfile}"
 
 #if [ -z "${TRANS}" ]; then
 #	: #ignore
