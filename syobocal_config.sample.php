@@ -58,7 +58,8 @@ $cfg['media_path'] = array(
 $cfg['title_cmp_traditional'] = false;
 
 // 記号。これらをタイトル比較前に削除する。
-$cfg['symbols'] = '/ _#★☆';
+$star_symbols = "\xe2\x98\x86\xe2\x98\x85"; // "WHITE STAR(U+2606)" and "BLACK STAR(U+2605)"
+$cfg['symbols'] = "/ -_#「」『』".$star_symbols;
 
 // ファイル名に使用できない記号。これを指定した場合、すべて一文字目に置き換わる。
 $cfg['safe_filename'] = '_/';
