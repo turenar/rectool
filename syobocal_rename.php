@@ -495,6 +495,9 @@ EOT;
 		if (empty($title)) {
 			return null;
 		}
+		if (!$useOldMatch) {
+			$title = preg_replace('/\(.+\)/u', '', $title);
+		}
 		$title = Normalizer::normalize($title, Normalizer::FORM_KC);
 		if (!$useOldMatch) {
 			$title = mb_strtolower(strtr($title, $this->cfg['replace']['newpre']));
