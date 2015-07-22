@@ -88,3 +88,4 @@ $cfg['replace'] = json_decode(file_get_contents($script_path . "/syobocal_replac
 date_default_timezone_set('Asia/Tokyo');
 mb_internal_encoding('UTF-8');
 umask($umask);
+setlocale(LC_ALL, 'ja_JP.UTF-8');
