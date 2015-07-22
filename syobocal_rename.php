@@ -484,6 +484,8 @@ EOT;
 		$title = Normalizer::normalize($title, Normalizer::FORM_KC);
 		if ($useOldMatch) {
 			$title = strtr($title, $this->cfg['replace']['pre']);
+		} else {
+			$title = mb_strtolower($title);
 		}
 		$title = preg_replace('/['.preg_quote($this->cfg['symbols'], '/').']/u', '', $title);
 		return $title;
@@ -495,7 +497,7 @@ EOT;
 		}
 		$title = Normalizer::normalize($title, Normalizer::FORM_KC);
 		if (!$useOldMatch) {
-			$title = strtr($title, $this->cfg['replace']['newpre']);
+			$title = mb_strtolower(strtr($title, $this->cfg['replace']['newpre']));
 		}
 		$title = preg_replace('/['.preg_quote($this->cfg['symbols'], '/').']/u', '', $title);
 		return $title;
